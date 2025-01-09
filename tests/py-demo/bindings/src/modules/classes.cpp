@@ -19,13 +19,13 @@ void bind_classes_module(py::module&&m) {
     }
 
     {
-        py::class_<demo::Base> pyBase(m, "Base");
+        py::class_<demo::MyBase> pyMyBase(m, "MyBase");
 
-        pyBase.def_readwrite("name", &demo::Base::name);
+        pyMyBase.def_readwrite("name", &demo::MyBase::name);
 
-        py::class_<demo::Base::Inner>(pyBase, "Inner");
+        py::class_<demo::MyBase::Inner>(pyMyBase, "Inner");
 
-        py::class_<demo::Derived, demo::Base>(m, "Derived")
+        py::class_<demo::Derived, demo::MyBase>(m, "Derived")
             .def_readwrite("count", &demo::Derived::count);
 
     }

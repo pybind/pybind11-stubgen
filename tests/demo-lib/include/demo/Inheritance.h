@@ -1,15 +1,17 @@
 #pragma once
 #include <string>
 
-namespace demo{
+namespace demo
+{
+    // note: class stubs must not be sorted
+    // https://github.com/sizmailov/pybind11-stubgen/issues/231
 
-struct Base {
-  struct Inner{};
-  std::string name;
-};
+    struct MyBase {
+      struct Inner{};
+      std::string name;
+    };
 
-struct Derived : Base {
-  int count;
-};
-
+    struct Derived : MyBase {
+      int count;
+    };
 }
