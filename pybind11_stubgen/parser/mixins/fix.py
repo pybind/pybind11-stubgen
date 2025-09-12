@@ -7,7 +7,7 @@ import re
 import sys
 import types
 from logging import getLogger
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence, TypeVar
 
 from pybind11_stubgen.parser.errors import (
     InvalidExpressionError,
@@ -37,6 +37,8 @@ from pybind11_stubgen.structs import (
 from pybind11_stubgen.typing_ext import DynamicSize, FixedSize
 
 logger = getLogger("pybind11_stubgen")
+
+T = TypeVar("T")
 
 
 class RemoveSelfAnnotation(IParser):
@@ -88,6 +90,7 @@ class FixMissingImports(IParser):
         self.__extra_imports: set[Import] = set()
         self.__current_module: types.ModuleType | None = None
         self.__current_class: type | None = None
+        self.__local_types: set[str] = set()
 
     def handle_alias(self, path: QualifiedName, origin: Any) -> Alias | None:
         result = super().handle_alias(path, origin)
@@ -144,6 +147,13 @@ class FixMissingImports(IParser):
             self._add_import(QualifiedName.from_str(result.repr))
         return result
 
+    def call_with_local_types(self, parameters: list[str], func: Callable[[], T]) -> T:
+        original_local_types = self.__local_types.copy()
+        self.__local_types.update(parameters)
+        result = super().call_with_local_types(parameters, func)
+        self.__local_types = original_local_types
+        return result
+
     def parse_annotation_str(
         self, annotation_str: str
     ) -> ResolvedType | InvalidExpression | Value:
@@ -155,7 +165,7 @@ class FixMissingImports(IParser):
     def _add_import(self, name: QualifiedName) -> None:
         if len(name) == 0:
             return
-        if len(name) == 1 and len(name[0]) == 0:
+        if len(name) == 1 and (len(name[0]) == 0 or name[0] in self.__local_types):
             return
         if hasattr(builtins, name[0]):
             return
@@ -636,6 +646,7 @@ class FixNumpyArrayDimTypeVar(IParser):
     numpy_primitive_types = FixNumpyArrayDimAnnotation.numpy_primitive_types
 
     __DIM_VARS: set[str] = set()
+    __local_types: set[str] = set()
 
     def handle_module(
         self, path: QualifiedName, module: types.ModuleType
@@ -662,6 +673,13 @@ class FixNumpyArrayDimTypeVar(IParser):
 
         return result
 
+    def call_with_local_types(self, parameters: list[str], func: Callable[[], T]) -> T:
+        original_local_types = self.__local_types.copy()
+        self.__local_types.update(parameters)
+        result = super().call_with_local_types(parameters, func)
+        self.__local_types = original_local_types
+        return result
+
     def parse_annotation_str(
         self, annotation_str: str
     ) -> ResolvedType | InvalidExpression | Value:
@@ -673,6 +691,9 @@ class FixNumpyArrayDimTypeVar(IParser):
         result = super().parse_annotation_str(annotation_str)
 
         if not isinstance(result, ResolvedType):
+            return result
+
+        if len(result.name) == 1 and result.name[0] in self.__local_types:
             return result
 
         # handle unqualified, single-letter annotation as a TypeVar
