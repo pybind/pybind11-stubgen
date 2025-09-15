@@ -469,8 +469,14 @@ class FixCurrentModulePrefixInTypeNames(IParser):
     ) -> ResolvedType | InvalidExpression | Value:
         result = super().parse_annotation_str(annotation_str)
         if isinstance(result, ResolvedType):
-            result.name = self._strip_current_module(result.name)
+            self._strip_current_module_recursive(result)
         return result
+
+    def _strip_current_module_recursive(self, result: ResolvedType):
+        result.name = self._strip_current_module(result.name)
+        for parameter in result.parameters or ():
+            if isinstance(parameter, ResolvedType):
+                self._strip_current_module_recursive(parameter)
 
     def _strip_current_module(self, name: QualifiedName) -> QualifiedName:
         if name[: len(self.__current_module)] == self.__current_module:
