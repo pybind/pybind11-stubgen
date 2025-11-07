@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import sys
+from collections import defaultdict
 
 from pybind11_stubgen.structs import (
     Alias,
@@ -32,6 +33,36 @@ def indent_lines(lines: list[str], by=4) -> list[str]:
 class Printer:
     def __init__(self, invalid_expr_as_ellipses: bool):
         self.invalid_expr_as_ellipses = invalid_expr_as_ellipses
+
+    def _toposort_classes(self, classes: list[Class]) -> list[Class]:
+        in_degree = {c.name: 0 for c in classes}
+        graph = defaultdict(list)
+        class_map = {c.name: c for c in classes}
+
+        for c in classes:
+            for base in c.bases:
+                base_name = base[-1]
+                if base_name in class_map:
+                    graph[base_name].append(c.name)
+                    in_degree[c.name] += 1
+
+        queue = sorted([name for name, degree in in_degree.items() if degree == 0])
+        
+        sorted_classes = []
+        while queue:
+            name = queue.pop(0)
+            sorted_classes.append(class_map[name])
+            for neighbor in sorted(graph[name]):
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    queue.append(neighbor)
+
+        if len(sorted_classes) == len(classes):
+            return sorted_classes
+        else:
+            # Cycle detected, fallback to alphabetical sort
+            remaining = [c for c in classes if c not in sorted_classes]
+            return sorted_classes + sorted(remaining, key=lambda c: c.name)
 
     def print_alias(self, alias: Alias) -> list[str]:
         return [f"{alias.name} = {alias.origin}"]
@@ -90,7 +121,7 @@ class Printer:
         if class_.doc is not None:
             result.extend(self.print_docstring(class_.doc))
 
-        for sub_class in sorted(class_.classes, key=lambda c: c.name):
+        for sub_class in self._toposort_classes(class_.classes):
             result.extend(self.print_class(sub_class))
 
         modifier_order: dict[Modifier, int] = {
@@ -225,7 +256,7 @@ class Printer:
         for type_var in sorted(module.type_vars, key=lambda t: t.name):
             result.extend(self.print_type_var(type_var))
 
-        for class_ in sorted(module.classes, key=lambda c: c.name):
+        for class_ in self._toposort_classes(module.classes):
             result.extend(self.print_class(class_))
 
         for func in sorted(module.functions, key=lambda f: f.name):
