@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import sys
 from collections import defaultdict
+
+log = logging.getLogger("pybind11_stubgen")
 
 from pybind11_stubgen.structs import (
     Alias,
@@ -31,8 +34,9 @@ def indent_lines(lines: list[str], by=4) -> list[str]:
 
 
 class Printer:
-    def __init__(self, invalid_expr_as_ellipses: bool):
+    def __init__(self, invalid_expr_as_ellipses: bool, sort_by: str = "definition"):
         self.invalid_expr_as_ellipses = invalid_expr_as_ellipses
+        self.sort_by = sort_by
 
     def _toposort_classes(self, classes: list[Class]) -> list[Class]:
         in_degree = {c.name: 0 for c in classes}
@@ -62,6 +66,11 @@ class Printer:
         else:
             # Cycle detected, fallback to alphabetical sort
             remaining = [c for c in classes if c not in sorted_classes]
+            log.warning(
+                "Cycle detected in class inheritance involving: %s. "
+                "Falling back to alphabetical sort for these classes.",
+                [c.name for c in remaining],
+            )
             return sorted_classes + sorted(remaining, key=lambda c: c.name)
 
     def print_alias(self, alias: Alias) -> list[str]:
@@ -121,7 +130,11 @@ class Printer:
         if class_.doc is not None:
             result.extend(self.print_docstring(class_.doc))
 
-        for sub_class in self._toposort_classes(class_.classes):
+        classes_to_print = class_.classes
+        if self.sort_by == "topological":
+            classes_to_print = self._toposort_classes(class_.classes)
+
+        for sub_class in classes_to_print:
             result.extend(self.print_class(sub_class))
 
         modifier_order: dict[Modifier, int] = {
@@ -256,7 +269,11 @@ class Printer:
         for type_var in sorted(module.type_vars, key=lambda t: t.name):
             result.extend(self.print_type_var(type_var))
 
-        for class_ in self._toposort_classes(module.classes):
+        classes_to_print = module.classes
+        if self.sort_by == "topological":
+            classes_to_print = self._toposort_classes(module.classes)
+
+        for class_ in classes_to_print:
             result.extend(self.print_class(class_))
 
         for func in sorted(module.functions, key=lambda f: f.name):

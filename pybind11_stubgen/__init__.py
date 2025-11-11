@@ -77,6 +77,7 @@ class CLIArgs(Namespace):
     exit_code: bool
     dry_run: bool
     stub_extension: str
+    sort_by: str
     module_name: str
 
 
@@ -217,6 +218,14 @@ def arg_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
+        "--sort-by",
+        type=str,
+        default="definition",
+        choices=["definition", "topological"],
+        help="Sort classes by 'definition' order (default) or 'topological' order.",
+    )
+
+    parser.add_argument(
         "module_name",
         metavar="MODULE_NAME",
         type=str,
@@ -309,7 +318,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = arg_parser().parse_args(argv, namespace=CLIArgs())
 
     parser = stub_parser_from_args(args)
-    printer = Printer(invalid_expr_as_ellipses=not args.print_invalid_expressions_as_is)
+    printer = Printer(
+        invalid_expr_as_ellipses=not args.print_invalid_expressions_as_is,
+        sort_by=args.sort_by,
+    )
 
     out_dir, sub_dir = to_output_and_subdir(
         output_dir=args.output_dir,
