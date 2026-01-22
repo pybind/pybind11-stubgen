@@ -583,7 +583,7 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
         assert isinstance(union_t, ResolvedType)
         return ResolvedType(
             name=union_t.name,
-            parameters=[self.parse_type_str(variant) for variant in variants],
+            parameters=[self.parse_annotation_str(variant) for variant in variants],
         )
 
     def parse_type_str(
