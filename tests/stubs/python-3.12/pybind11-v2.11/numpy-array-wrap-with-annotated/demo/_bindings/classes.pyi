@@ -2,26 +2,7 @@ from __future__ import annotations
 
 import typing
 
-__all__: list[str] = ["Base", "CppException", "Derived", "Foo", "Outer"]
-
-class Base:
-    class Inner:
-        pass
-    name: str
-
-class CppException(Exception):
-    pass
-
-class Derived(Base):
-    count: int
-
-class Foo:
-    class FooChild:
-        def __init__(self) -> None: ...
-        def g(self) -> None: ...
-
-    def __init__(self) -> None: ...
-    def f(self) -> None: ...
+__all__: list[str] = ["CppException", "Derived", "Foo", "MyBase", "Outer"]
 
 class Outer:
     class Inner:
@@ -55,3 +36,22 @@ class Outer:
             def value(self) -> int: ...
         value: Outer.Inner.NestedEnum
     inner: Outer.Inner
+
+class MyBase:
+    class Inner:
+        pass
+    name: str
+
+class Derived(MyBase):
+    count: int
+
+class Foo:
+    class FooChild:
+        def __init__(self) -> None: ...
+        def g(self) -> None: ...
+
+    def __init__(self) -> None: ...
+    def f(self) -> None: ...
+
+class CppException(Exception):
+    pass

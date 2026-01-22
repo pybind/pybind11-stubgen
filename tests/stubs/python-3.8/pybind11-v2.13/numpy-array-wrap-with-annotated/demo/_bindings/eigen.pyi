@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import typing
+
 import numpy
 import pybind11_stubgen.typing_ext
 import scipy.sparse
-import typing_extensions
 
 __all__: list[str] = [
     "accept_matrix_int",
@@ -22,31 +23,31 @@ __all__: list[str] = [
 ]
 
 def accept_matrix_int(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray, numpy.int32, pybind11_stubgen.typing_ext.FixedSize(3, 3)
     ]
 ) -> None: ...
 def accept_vector_float64(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray, numpy.float64, pybind11_stubgen.typing_ext.FixedSize(3, 1)
     ]
 ) -> None: ...
 def dense_matrix_c(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize("m", "n")
     ]
-) -> typing_extensions.Annotated[
+) -> typing.Annotated[
     numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize("m", "n")
 ]: ...
 def dense_matrix_r(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize("m", "n")
     ]
-) -> typing_extensions.Annotated[
+) -> typing.Annotated[
     numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize("m", "n")
 ]: ...
 def fixed_mutator_a(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray,
         numpy.float32,
         pybind11_stubgen.typing_ext.FixedSize(5, 6),
@@ -54,7 +55,7 @@ def fixed_mutator_a(
     ]
 ) -> None: ...
 def fixed_mutator_c(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray,
         numpy.float32,
         pybind11_stubgen.typing_ext.FixedSize(5, 6),
@@ -63,7 +64,7 @@ def fixed_mutator_c(
     ]
 ) -> None: ...
 def fixed_mutator_r(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray,
         numpy.float32,
         pybind11_stubgen.typing_ext.FixedSize(5, 6),
@@ -72,28 +73,28 @@ def fixed_mutator_r(
     ]
 ) -> None: ...
 def four_col_matrix_r(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize("m", 4)
     ]
-) -> typing_extensions.Annotated[
+) -> typing.Annotated[
     numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize("m", 4)
 ]: ...
 def four_row_matrix_r(
-    arg0: typing_extensions.Annotated[
+    arg0: typing.Annotated[
         numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize(4, "n")
     ]
-) -> typing_extensions.Annotated[
+) -> typing.Annotated[
     numpy.ndarray, numpy.float32, pybind11_stubgen.typing_ext.DynamicSize(4, "n")
 ]: ...
-def get_matrix_int() -> typing_extensions.Annotated[
+def get_matrix_int() -> typing.Annotated[
     numpy.ndarray, numpy.int32, pybind11_stubgen.typing_ext.FixedSize(3, 3)
 ]: ...
-def get_vector_float64() -> typing_extensions.Annotated[
+def get_vector_float64() -> typing.Annotated[
     numpy.ndarray, numpy.float64, pybind11_stubgen.typing_ext.FixedSize(3, 1)
 ]: ...
 def sparse_matrix_c(
-    arg0: typing_extensions.Annotated[scipy.sparse.csc_matrix, numpy.float32]
-) -> typing_extensions.Annotated[scipy.sparse.csc_matrix, numpy.float32]: ...
+    arg0: typing.Annotated[scipy.sparse.csc_matrix, numpy.float32]
+) -> typing.Annotated[scipy.sparse.csc_matrix, numpy.float32]: ...
 def sparse_matrix_r(
-    arg0: typing_extensions.Annotated[scipy.sparse.csr_matrix, numpy.float32]
-) -> typing_extensions.Annotated[scipy.sparse.csr_matrix, numpy.float32]: ...
+    arg0: typing.Annotated[scipy.sparse.csr_matrix, numpy.float32]
+) -> typing.Annotated[scipy.sparse.csr_matrix, numpy.float32]: ...
