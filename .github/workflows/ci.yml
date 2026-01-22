@@ -58,39 +58,24 @@ jobs:
                 if: ${{ failure() ||  success() }}
 
     tests:
-        name: "Test 🐍 ${{ matrix.python }} • pybind-${{ matrix.pybind11-branch }} • ${{ matrix.numpy-format }}"
+        name: "Test 🐍 ${{ matrix.config.python }} • pybind-${{ matrix.config.pybind11-branch }} • ${{ matrix.config.numpy-format }}"
         runs-on: ubuntu-latest
         needs: [build]
         strategy:
             fail-fast: false
             matrix:
-                pybind11-branch:
-                    - "v2.13"
-                python:
-                    - "3.13"
-                    - "3.12"
-                    - "3.11"
-                    - "3.10"
-                    - "3.9"
-                    - "3.8"
-                numpy-format:
-                    - "numpy-array-wrap-with-annotated"
-                include:
-                    - python: "3.13"
-                      pybind11-branch: "v2.9"
-                      numpy-format: "numpy-array-wrap-with-annotated"
-                    - python: "3.13"
-                      pybind11-branch: "v2.11"
-                      numpy-format: "numpy-array-wrap-with-annotated"
-                    - python: "3.13"
-                      pybind11-branch: "v2.12"
-                      numpy-format: "numpy-array-wrap-with-annotated"
-                    - python: "3.13"
-                      pybind11-branch: "v2.13"
-                      numpy-format: "numpy-array-use-type-var"
-#                    # TODO: uncomment
-#                    - python: "3.13"
-#                      pybind11-branch: "master"
+                config: [
+                    { pybind11-branch: "v2.13", python: "3.13", numpy-format: "numpy-array-use-type-var"},
+                    { pybind11-branch: "v2.13", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.13", python: "3.12", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.13", python: "3.11", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.13", python: "3.10", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.13", python: "3.9", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.13", python: "3.8", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.12", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.11", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
+                    { pybind11-branch: "v2.9", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
+                ]
         steps:
             -   uses: actions/checkout@v5
 
@@ -100,10 +85,10 @@ jobs:
                     name: dist
                     path: dist
 
-            -   name: Setup Python ${{ matrix.python }}
+            -   name: Setup Python ${{ matrix.config.python }}
                 uses: actions/setup-python@v5
                 with:
-                    python-version: ${{ matrix.python }}
+                    python-version: ${{ matrix.config.python }}
 
             -   name: Update CMake
                 uses: jwlawson/actions-setup-cmake@v2
@@ -116,7 +101,7 @@ jobs:
                 run: python -m pip install pytest-github-actions-annotate-failures
 
             -   name: Install requirements
-                run: pip install -r "./tests/stubs/python-${{ matrix.python }}/requirements.txt"
+                run: pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
 
             -   name: Install
                 shell: bash
@@ -125,18 +110,18 @@ jobs:
 
             -   name: Install demo module
                 shell: bash
-                run: ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.pybind11-branch }}"
+                run: ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.config.pybind11-branch }}"
 
             -   name: Check stubs generation
                 shell: bash
-                run: ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.python }}/pybind11-${{ matrix.pybind11-branch }}/${{ matrix.numpy-format }}" --${{ matrix.numpy-format }}
+                run: ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}" --${{ matrix.config.numpy-format }}
 
             -   name: Archive patch
                 uses: actions/upload-artifact@v6
                 if: failure()
                 with:
-                    name: "python-${{ matrix.python }}-pybind-${{ matrix.pybind11-branch }}-${{ matrix.numpy-format }}.patch"
-                    path: "./tests/stubs/python-${{ matrix.python }}/pybind11-${{ matrix.pybind11-branch }}/${{ matrix.numpy-format }}.patch"
+                    name: "python-${{ matrix.config.python }}-pybind-${{ matrix.config.pybind11-branch }}-${{ matrix.config.numpy-format }}.patch"
+                    path: "./tests/stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}.patch"
                     retention-days: 30
                     if-no-files-found: ignore
 

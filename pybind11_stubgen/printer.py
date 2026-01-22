@@ -168,7 +168,7 @@ class Printer:
             '"""',
             *(
                 line.replace("\\", r"\\").replace('"""', r"\"\"\"")
-                for line in doc.splitlines()
+                for line in doc.lstrip("\n").splitlines()
             ),
             '"""',
         ]

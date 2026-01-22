@@ -4,6 +4,7 @@ import typing
 
 __all__: list[str] = [
     "backslashes_should_be_escaped",
+    "issue_274_docstring_leading_newline",
     "issue_51_catastrophic_regex",
     "issue_73_utf8_doc_chars",
 ]
@@ -15,6 +16,11 @@ def backslashes_should_be_escaped() -> None:
     A detailed description of this function.
 
     Here's some reStructuredText: :math:`x = [x, y, \\theta]^T`
+    """
+
+def issue_274_docstring_leading_newline() -> None:
+    """
+    This is a docstring
     """
 
 def issue_51_catastrophic_regex(arg0: int, arg1: int) -> None:

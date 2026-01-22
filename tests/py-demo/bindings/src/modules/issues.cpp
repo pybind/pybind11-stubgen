@@ -36,4 +36,7 @@ void bind_issues_module(py::module &&m) {
         auto cleanup_callback = []() { /* ... */ };
         m.attr("_cleanup") = py::capsule(cleanup_callback);
     }
+    {
+        m.def("issue_274_docstring_leading_newline", [](){}, py::doc("\nThis is a docstring"));
+    }
 }
