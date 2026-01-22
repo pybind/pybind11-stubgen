@@ -15,8 +15,8 @@ license-files = ["LICENSE"]
 dynamic = ["readme"]
 
 [project.urls]
-Repository = "https://github.com/sizmailov/pybind11-stubgen"
-Issues = "https://github.com/sizmailov/pybind11-stubgen/issues"
+Repository = "https://github.com/pybind/pybind11-stubgen"
+Issues = "https://github.com/pybind/pybind11-stubgen/issues"
 
 [tool.setuptools.packages]
 find = {}
