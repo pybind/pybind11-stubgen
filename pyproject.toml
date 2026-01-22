@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybind11-stubgen"
+description = "PEP 561 type stubs generator for pybind11 modules"
+version = "2.5.5"
+requires-python = "~=3.8"
+authors = [
+    {name = "Sergei Izmailov", email = "sergei.a.izmailov@gmail.com"},
+]
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+dynamic = ["readme"]
+
+[project.urls]
+Repository = "https://github.com/pybind/pybind11-stubgen"
+Issues = "https://github.com/pybind/pybind11-stubgen/issues"
+
+[tool.setuptools.packages]
+find = {}
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[project.entry-points.console_scripts]
+pybind11-stubgen = "pybind11_stubgen.__init__:main"
