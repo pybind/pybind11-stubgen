@@ -17,6 +17,7 @@ __all__: list[str] = [
     "func_w_named_pos_args",
     "generic",
     "mul",
+    "nested_types",
     "pass_callback",
     "pos_kw_only_mix",
     "pos_kw_only_variadic_mix",
@@ -49,6 +50,7 @@ def mul(p: float, q: float) -> float:
     Multiply p and q (double)
     """
 
+def nested_types(arg0: list[Foo] | Foo) -> list[Foo] | Foo: ...
 def pass_callback(arg0: typing.Callable[[Foo], Foo]) -> Foo: ...
 def pos_kw_only_mix(i: int, /, j: int, *, k: int) -> tuple: ...
 def pos_kw_only_variadic_mix(i: int, /, j: int, *args, k: int, **kwargs) -> tuple: ...
