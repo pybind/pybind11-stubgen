@@ -5,8 +5,6 @@ import logging
 import sys
 from collections import defaultdict
 
-log = logging.getLogger("pybind11_stubgen")
-
 from pybind11_stubgen.structs import (
     Alias,
     Annotation,
@@ -27,6 +25,8 @@ from pybind11_stubgen.structs import (
     TypeVar_,
     Value,
 )
+
+log = logging.getLogger("pybind11_stubgen")
 
 
 def indent_lines(lines: list[str], by=4) -> list[str]:
@@ -51,7 +51,7 @@ class Printer:
                     in_degree[c.name] += 1
 
         queue = sorted([name for name, degree in in_degree.items() if degree == 0])
-        
+
         sorted_classes = []
         while queue:
             name = queue.pop(0)
