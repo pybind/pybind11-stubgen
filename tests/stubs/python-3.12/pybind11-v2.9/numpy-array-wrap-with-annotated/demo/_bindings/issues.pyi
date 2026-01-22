@@ -34,4 +34,9 @@ def issue_73_utf8_doc_chars() -> None:
     values provide more damping in response.
     """
 
+def issue_274_docstring_leading_newline() -> None:
+    """
+    This is a docstring
+    """
+
 _cleanup: typing.Any  # value = <capsule object>
