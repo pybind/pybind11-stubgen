@@ -30,18 +30,33 @@ class ConsoleForegroundColor:
     Blue: typing.ClassVar[
         ConsoleForegroundColor
     ]  # value = <ConsoleForegroundColor.Blue: 34>
+    """
+    Blue color
+    """
     Green: typing.ClassVar[
         ConsoleForegroundColor
     ]  # value = <ConsoleForegroundColor.Green: 32>
+    """
+    Green color
+    """
     Magenta: typing.ClassVar[
         ConsoleForegroundColor
     ]  # value = <ConsoleForegroundColor.Magenta: 35>
+    """
+    Magenta color
+    """
     None_: typing.ClassVar[
         ConsoleForegroundColor
     ]  # value = <ConsoleForegroundColor.None_: -1>
+    """
+    No color
+    """
     Yellow: typing.ClassVar[
         ConsoleForegroundColor
     ]  # value = <ConsoleForegroundColor.Yellow: 33>
+    """
+    Yellow color
+    """
     __members__: typing.ClassVar[
         dict[str, ConsoleForegroundColor]
     ]  # value = {'Green': <ConsoleForegroundColor.Green: 32>, 'Yellow': <ConsoleForegroundColor.Yellow: 33>, 'Blue': <ConsoleForegroundColor.Blue: 34>, 'Magenta': <ConsoleForegroundColor.Magenta: 35>, 'None_': <ConsoleForegroundColor.None_: -1>}

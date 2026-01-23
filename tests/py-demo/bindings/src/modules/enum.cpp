@@ -5,11 +5,11 @@
 void bind_enum_module(py::module&&m) {
 
     py::enum_<demo::sublibA::ConsoleForegroundColor>(m, "ConsoleForegroundColor")
-        .value("Green", demo::sublibA::ConsoleForegroundColor::Green)
-        .value("Yellow", demo::sublibA::ConsoleForegroundColor::Yellow)
-        .value("Blue", demo::sublibA::ConsoleForegroundColor::Blue)
-        .value("Magenta", demo::sublibA::ConsoleForegroundColor::Magenta)
-        .value("None_", demo::sublibA::ConsoleForegroundColor::None_)
+        .value("Green", demo::sublibA::ConsoleForegroundColor::Green, "Green color")
+        .value("Yellow", demo::sublibA::ConsoleForegroundColor::Yellow, "Yellow color")
+        .value("Blue", demo::sublibA::ConsoleForegroundColor::Blue, "Blue color")
+        .value("Magenta", demo::sublibA::ConsoleForegroundColor::Magenta, "Magenta color")
+        .value("None_", demo::sublibA::ConsoleForegroundColor::None_, "No color")
         .export_values();
 
     m.def(

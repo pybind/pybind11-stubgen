@@ -172,10 +172,17 @@ class BaseParser(IParser):
         )
 
     def handle_attribute(self, path: QualifiedName, value: Any) -> Attribute | None:
+        doc = None
+        entries = getattr(value, "__entries", None)
+
+        if entries is not None and path[-1] in entries:
+            doc = self.handle_docstring(path, entries[path[-1]][1])
+
         return Attribute(
             name=path[-1],
             value=self.handle_value(value),
             annotation=ResolvedType(name=self.handle_type(type(value))),
+            doc=doc,
         )
 
     def handle_bases(
@@ -196,6 +203,7 @@ class BaseParser(IParser):
             attribute=Attribute(
                 name=attr.name,
                 value=attr.value,
+                doc=attr.doc
             ),
             modifier="static",
         )

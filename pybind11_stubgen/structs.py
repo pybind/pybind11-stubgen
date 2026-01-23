@@ -108,6 +108,7 @@ class Attribute:
     name: Identifier
     value: Value | None
     annotation: Annotation | None = field_(default=None)
+    doc: Docstring | None = field_(default=None)
 
 
 @dataclass
