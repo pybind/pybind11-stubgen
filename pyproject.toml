@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pybind11-stubgen"
 description = "PEP 561 type stubs generator for pybind11 modules"
 version = "2.5.5"
-requires-python = "~=3.8"
+requires-python = ">=3.10"
 authors = [
     {name = "Sergei Izmailov", email = "sergei.a.izmailov@gmail.com"},
 ]
