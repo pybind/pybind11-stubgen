@@ -48,7 +48,10 @@ uv python install 3.10 3.11 3.12 3.13
 ```
 To regenerate the reference stubs run:
 ```shell
-pip install -r requirements-dev.txt
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements-dev.txt
+uv tool install tox --with tox-uv
 uv run tox
 ```
 
