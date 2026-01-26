@@ -3,4 +3,5 @@ flake8~=6.1.0
 isort==5.10.1
 numpy~=1.20
 scipy~=1.0
+tox==4.34.1
 typing_extensions==4.7.1
