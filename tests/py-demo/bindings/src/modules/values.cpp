@@ -10,7 +10,7 @@ class Foo {};
 } // namespace
 
 void bind_values_module(py::module &&m) {
-    using namespace values_detail;;
+    using namespace values_detail;
     {
         // python module as value
         auto &&pyDummy = py::class_<Dummy>(m, "Dummy");
