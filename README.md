@@ -38,3 +38,18 @@ pybind11-stubgen [-h]
                  [--stub-extension EXT]
                  MODULE_NAME
 ```
+
+Contributing
+-----
+During development it may be necessary to update the reference stubs under `tests/stubs`.
+This can be done locally via a convenience tox configuration.
+All the Python interpreters that tests are run against need to be available in your environment.
+For example, you can install them via uv as such:
+```shell
+uv python install 3.10 3.11 3.12 3.13
+```
+To regenerate the reference stubs run:
+```shell
+uv run tox
+```
+
