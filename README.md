@@ -41,10 +41,7 @@ pybind11-stubgen [-h]
 
 Contributing
 -----
-During development it may be necessary to update the reference stubs under `tests/stubs`.
-This can be done locally via a convenience tox configuration.
-All the Python interpreters that tests are run against need to be available in your environment.
-For example, you can install them via uv as such:
+During development, you may need to update the reference stubs in tests/stubs. This can be done locally using a convenience tox configuration. Ensure that all Python interpreters required by the test suite are available in your environment. For example, you can install them via uv:
 ```shell
 uv python install 3.10 3.11 3.12 3.13
 ```
