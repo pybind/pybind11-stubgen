@@ -1,4 +1,4 @@
-black==black==26.1.0
+black==26.1.0
 cmeel==0.59.0
 flake8~=6.1.0
 isort==5.10.1
