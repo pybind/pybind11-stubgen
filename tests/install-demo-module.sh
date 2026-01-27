@@ -52,22 +52,23 @@ function parse_args() {
 
 clone_pybind11() {
   mkdir -p "${EXTERNAL_DIR}"
-  if [ ! -d "${EXTERNAL_DIR}/pybind11" ]; then
+  if [ ! -d "${EXTERNAL_DIR}/pybind11/${PYBIND11_BRANCH}" ]; then
     git clone \
         --depth 1 \
         --branch "${PYBIND11_BRANCH}" \
         --single-branch \
         https://github.com/pybind/pybind11.git \
-        "${EXTERNAL_DIR}/pybind11"
+        "${EXTERNAL_DIR}/pybind11/${PYBIND11_BRANCH}"
   fi
 }
 
 install_pybind11() {
   export CMAKE_PREFIX_PATH="$(cmeel cmake)"
   cmake \
-        -S "${EXTERNAL_DIR}/pybind11" \
+        -S "${EXTERNAL_DIR}/pybind11/${PYBIND11_BRANCH}" \
         -B "${BUILD_ROOT}/pybind11"\
-        -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}
+        -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} \
+        --fresh
   cmake --install "${BUILD_ROOT}/pybind11" \
         --prefix "${INSTALL_PREFIX}"
 }
@@ -82,7 +83,8 @@ install_demo() {
 install_pydemo() {
   (
     export CMAKE_PREFIX_PATH="$(resolve_path "${INSTALL_PREFIX}"):$(cmeel cmake)";
-    pip install --force-reinstall "${TESTS_ROOT}/py-demo"
+    rm -rf ${TESTS_ROOT}/py-demo/build
+    ${PYTHON_EXECUTABLE} -m pip install --force-reinstall "${TESTS_ROOT}/py-demo"
   )
 }
 

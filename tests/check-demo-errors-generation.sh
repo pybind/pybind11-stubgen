@@ -46,13 +46,8 @@ run_stubgen() {
 }
 
 remove_randomness_in_errors (){
-  if sed --version >/dev/null 2>&1; then
-    # GNU sed (Linux)
-    sed -i 's/0x[0-9a-f]\+/0x1234abcd5678/gi' "$DEMO_ERRORS_FILE"
-  else
-    # BSD sed (macOS)
-    sed -i '' 's/0x[0-9a-f]\+/0x1234abcd5678/gi' "$DEMO_ERRORS_FILE"
-  fi
+  sed -E -i.bak 's/0x[0-9A-Fa-f]+/0x1234abcd5678/g' "$DEMO_ERRORS_FILE"
+  rm -f "${DEMO_ERRORS_FILE}.bak"
 }
 
 main () {
