@@ -22,6 +22,7 @@ run_stubgen() {
     pybind11-stubgen \
       demo \
       --output-dir=${STUBS_DIR} \
+      --numpy-array-wrap-with-annotated \
       --exit-code \
       2> "${DEMO_ERRORS_FILE}" \
     || exit 0

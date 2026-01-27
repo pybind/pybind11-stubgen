@@ -59,7 +59,10 @@ install_pybind11() {
 }
 
 install_demo() {
-  cmake -S "${TESTS_ROOT}/demo-lib" -B "${BUILD_ROOT}/demo"
+  cmake \
+    -S "${TESTS_ROOT}/demo-lib" \
+    -B "${BUILD_ROOT}/demo" \
+    -DCMAKE_CXX_STANDARD=17
   cmake --build "${BUILD_ROOT}/demo"
   cmake --install "${BUILD_ROOT}/demo" \
         --prefix "${INSTALL_PREFIX}"
