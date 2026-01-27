@@ -7,6 +7,7 @@ __all__: list[str] = ["Base", "CppException", "Derived", "Foo", "Outer"]
 class Base:
     class Inner:
         pass
+
     name: str
 
 class CppException(Exception):
@@ -53,5 +54,7 @@ class Outer:
             def name(self) -> str: ...
             @property
             def value(self) -> int: ...
+
         value: Outer.Inner.NestedEnum
+
     inner: Outer.Inner

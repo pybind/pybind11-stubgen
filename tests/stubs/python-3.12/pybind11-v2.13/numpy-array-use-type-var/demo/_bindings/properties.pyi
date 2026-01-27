@@ -21,11 +21,13 @@ class WithGetterSetterDoc:
         """
         getter doc token
         """
+
     @def_property.setter
     def def_property(self, arg1: int) -> None:
         """
         setter doc token
         """
+
     @property
     def def_property_readonly(self) -> int:
         """
@@ -44,6 +46,7 @@ class WithPropAndGetterSetterDoc:
         """
         prop doc token
         """
+
     @def_property.setter
     def def_property(self, arg1: int) -> None: ...
     @property
@@ -64,6 +67,7 @@ class WithPropDoc:
         """
         prop doc token
         """
+
     @def_property.setter
     def def_property(self, arg1: int) -> None: ...
     @property
@@ -71,16 +75,19 @@ class WithPropDoc:
         """
         prop doc token
         """
+
     @property
     def def_readonly(self) -> int:
         """
         prop doc token
         """
+
     @property
     def def_readwrite(self) -> int:
         """
         prop doc token
         """
+
     @def_readwrite.setter
     def def_readwrite(self, arg0: int) -> None: ...
 
