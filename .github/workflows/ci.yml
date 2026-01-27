@@ -92,7 +92,7 @@ jobs:
                 uses: jwlawson/actions-setup-cmake@v2
                 with:
                     # https://github.com/pybind/pybind11/blob/914c06fb252b6cc3727d0eedab6736e88a3fcb01/CMakeLists.txt#L13C34-L13C38
-                    cmake-version: '3.22.x'
+                    cmake-version: '3.28.x'
 
             -   name: Setup annotations on Linux
                 if: runner.os == 'Linux'
