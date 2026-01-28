@@ -50,8 +50,6 @@ To regenerate the reference stubs run:
 ```shell
 uv venv
 source .venv/bin/activate
-uv pip install -r requirements-dev.txt
 uv tool install tox --with tox-uv
 uv run tox
 ```
-
