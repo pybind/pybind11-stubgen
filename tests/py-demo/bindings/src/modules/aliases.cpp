@@ -3,7 +3,7 @@
 #include <demo/Foo.h>
 #include <demo/sublibA/ConsoleColors.h>
 
-namespace {
+namespace aliases_detail {
     class Dummy {
     };
 
@@ -21,6 +21,7 @@ namespace {
 } // namespace
 
 void bind_aliases_module(py::module &&m) {
+    using namespace aliases_detail;
     {
         // python module as value
         auto &&pyDummy = py::class_<Dummy>(m, "Dummy");

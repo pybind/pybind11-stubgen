@@ -1,6 +1,8 @@
-black==22.8.0
+black==26.1.0
+cmeel==0.59.0
 flake8~=6.1.0
 isort==5.10.1
 numpy~=1.20
+pip
 scipy~=1.0
-typing_extensions==4.7.1
+typing_extensions>=4,<5

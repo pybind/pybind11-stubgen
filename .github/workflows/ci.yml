@@ -1,196 +1,237 @@
 name: CI
 
 on:
-    workflow_dispatch:
-    pull_request:
-    push:
-        branches:
-            - master
-        tags:
-            - 'v*'
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
 
 jobs:
-    build:
-        name: Build wheel
-        runs-on: ubuntu-latest
-        steps:
-        -   uses: actions/checkout@v5
-        -   uses: actions/setup-python@v5
-            with:
-                python-version: "3.13"
+  build:
+    name: Build wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
-        -   name: Install build
-            run: python -m pip --disable-pip-version-check install build
+      - name: Install build
+        run: python -m pip --disable-pip-version-check install build
 
-        -   name: Build sdist + wheel
-            run: python -m build
+      - name: Build sdist + wheel
+        run: python -m build
 
-        -   name: Upload build artifacts
-            uses: actions/upload-artifact@v6
-            with:
-                name: dist
-                path: dist
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist
 
-    format:
-        name: Format code
-        runs-on: ubuntu-latest
-        steps:
-            -   name: Setup Python 3.13
-                uses: actions/setup-python@v5
-                with:
-                    python-version: "3.13"
-            -   name: Checkout
-                uses: actions/checkout@v5
-            -   name: Install requirements
-                run: pip install -r requirements-dev.txt
-            -   name: Run isort
-                run: isort --check --profile=black --diff ./pybind11_stubgen
-                if: ${{ failure() ||  success() }}
-            -   name: Run black
-                run: black --diff ./pybind11_stubgen
-                if: ${{ failure() ||  success() }}
-            -   name: Run flake8
-                run: |
-                    flake8 \
-                      --max-line-length=88 \
-                      --extend-ignore=E203 \
-                      --extend-exclude=venv/,.pytest_cache/,.ipynb_checkpoints/,tests/,tmp/,build/
-                if: ${{ failure() ||  success() }}
+  format:
+    name: Format code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Install requirements
+        run: pip install -r requirements-dev.txt
+      - name: Run isort
+        run: isort --check --profile=black --diff ./pybind11_stubgen
+        if: ${{ failure() ||  success() }}
+      - name: Run black
+        run: black --diff ./pybind11_stubgen
+        if: ${{ failure() ||  success() }}
+      - name: Run flake8
+        run: |
+          flake8 \
+            --max-line-length=88 \
+            --extend-ignore=E203 \
+            --extend-exclude=venv/,.pytest_cache/,.ipynb_checkpoints/,tests/,tmp/,build/
+        if: ${{ failure() ||  success() }}
 
-    tests:
-        name: "Test 🐍 ${{ matrix.config.python }} • pybind-${{ matrix.config.pybind11-branch }} • ${{ matrix.config.numpy-format }}"
-        runs-on: ubuntu-latest
-        needs: [build]
-        strategy:
-            fail-fast: false
-            matrix:
-                config: [
-                    { pybind11-branch: "v2.13", python: "3.13", numpy-format: "numpy-array-use-type-var"},
-                    { pybind11-branch: "v2.13", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
-                    { pybind11-branch: "v2.13", python: "3.12", numpy-format: "numpy-array-wrap-with-annotated"},
-                    { pybind11-branch: "v2.13", python: "3.11", numpy-format: "numpy-array-wrap-with-annotated"},
-                    { pybind11-branch: "v2.13", python: "3.10", numpy-format: "numpy-array-wrap-with-annotated"},
-                    { pybind11-branch: "v2.12", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
-                    { pybind11-branch: "v2.11", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
-                    { pybind11-branch: "v2.9", python: "3.13", numpy-format: "numpy-array-wrap-with-annotated"},
-                ]
-        steps:
-            -   uses: actions/checkout@v5
+  tests:
+    name: "Test 🐍 ${{ matrix.config.python }} • pybind-${{ matrix.config.pybind11-branch }} • ${{ matrix.config.numpy-format }}"
+    runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          [
+            {
+              pybind11-branch: "v2.13",
+              python: "3.13",
+              numpy-format: "numpy-array-use-type-var",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v2.13",
+              python: "3.13",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v2.13",
+              python: "3.12",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v2.13",
+              python: "3.11",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v2.13",
+              python: "3.10",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v2.12",
+              python: "3.13",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "3.28.3",
+            },
+            {
+              pybind11-branch: "v2.11",
+              python: "3.13",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "3.28.3",
+            },
+            {
+              pybind11-branch: "v2.9",
+              python: "3.13",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "3.28.3",
+            },
+          ]
+    steps:
+      - uses: actions/checkout@v5
 
-            -   name: Download build artifacts
-                uses: actions/download-artifact@v6
-                with:
-                    name: dist
-                    path: dist
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist
 
-            -   name: Setup Python ${{ matrix.config.python }}
-                uses: actions/setup-python@v5
-                with:
-                    python-version: ${{ matrix.config.python }}
+      - name: Setup Python ${{ matrix.config.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.config.python }}
 
-            -   name: Update CMake
-                uses: jwlawson/actions-setup-cmake@v2
-                with:
-                    # https://github.com/pybind/pybind11/blob/914c06fb252b6cc3727d0eedab6736e88a3fcb01/CMakeLists.txt#L13C34-L13C38
-                    cmake-version: '3.22.x'
+      - name: Update CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          # https://github.com/pybind/pybind11/blob/914c06fb252b6cc3727d0eedab6736e88a3fcb01/CMakeLists.txt#L13C34-L13C38
+          cmake-version: ${{ matrix.config.cmake-version }}
 
-            -   name: Setup annotations on Linux
-                if: runner.os == 'Linux'
-                run: python -m pip install pytest-github-actions-annotate-failures
+      - name: Setup annotations on Linux
+        if: runner.os == 'Linux'
+        run: python -m pip install pytest-github-actions-annotate-failures
 
-            -   name: Install requirements
-                run: pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
+      - name: Install requirements
+        run: pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
 
-            -   name: Install
-                shell: bash
-                working-directory: dist
-                run: python -m pip --disable-pip-version-check install *.whl
+      - name: Install
+        shell: bash
+        working-directory: dist
+        run: python -m pip --disable-pip-version-check install *.whl
 
-            -   name: Install demo module
-                shell: bash
-                run: ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.config.pybind11-branch }}"
+      - name: Install demo module
+        shell: bash
+        run: ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.config.pybind11-branch }}"
 
-            -   name: Check stubs generation
-                shell: bash
-                run: ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}" --${{ matrix.config.numpy-format }}
+      - name: Check stubs generation
+        shell: bash
+        run: ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}" --${{ matrix.config.numpy-format }}
 
-            -   name: Archive patch
-                uses: actions/upload-artifact@v6
-                if: failure()
-                with:
-                    name: "python-${{ matrix.config.python }}-pybind-${{ matrix.config.pybind11-branch }}-${{ matrix.config.numpy-format }}.patch"
-                    path: "./tests/stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}.patch"
-                    retention-days: 30
-                    if-no-files-found: ignore
+      - name: Archive patch
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: "python-${{ matrix.config.python }}-pybind-${{ matrix.config.pybind11-branch }}-${{ matrix.config.numpy-format }}.patch"
+          path: "./tests/stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}.patch"
+          retention-days: 30
+          if-no-files-found: ignore
 
-            -  name: Check error generation
-               shell: bash
-               run: ./tests/check-demo-errors-generation.sh
+      - name: Check error generation
+        shell: bash
+        run: ./tests/check-demo-errors-generation.sh
 
-    test-cli-options:
-        name: "Runs on 🐍 ${{ matrix.python }} • ${{ matrix.test-package }}"
-        runs-on: ubuntu-latest
-        needs: [build]
-        strategy:
-            fail-fast: false
-            matrix:
-                test-package: [ "gemmi" ]
-                python:
-                    - "3.13"
-                    - "3.12"
-                    - "3.11"
-                    - "3.10"
-        steps:
-            -   uses: actions/checkout@v5
+  test-cli-options:
+    name: "Runs on 🐍 ${{ matrix.python }} • ${{ matrix.test-package }}"
+    runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        test-package: ["gemmi"]
+        python:
+          - "3.13"
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    steps:
+      - uses: actions/checkout@v5
 
-            -   name: Setup Python ${{ matrix.python }}
-                uses: actions/setup-python@v5
-                with:
-                    python-version: ${{ matrix.python }}
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
 
-            -   name: Download build artifacts
-                uses: actions/download-artifact@v6
-                with:
-                    name: dist
-                    path: dist
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist
 
-            -   name: Setup annotations on Linux
-                if: runner.os == 'Linux'
-                run: python -m pip install pytest-github-actions-annotate-failures
+      - name: Setup annotations on Linux
+        if: runner.os == 'Linux'
+        run: python -m pip install pytest-github-actions-annotate-failures
 
-            -   name: Install
-                shell: bash
-                working-directory: dist
-                run: python -m pip --disable-pip-version-check install *.whl
+      - name: Install
+        shell: bash
+        working-directory: dist
+        run: python -m pip --disable-pip-version-check install *.whl
 
-            -   name: "Install ${{ matrix.test-package }}"
-                shell: bash
-                run: pip install "${{ matrix.test-package }}"
+      - name: "Install ${{ matrix.test-package }}"
+        shell: bash
+        run: pip install "${{ matrix.test-package }}"
 
-            -   name: Generate stubs
-                shell: bash
-                run: |
-                    pybind11-stubgen "${{ matrix.test-package }}" -o flavour-1 --numpy-array-wrap-with-annotated
-                    pybind11-stubgen "${{ matrix.test-package }}" -o flavour-2 --numpy-array-remove-parameters
-                    pybind11-stubgen "${{ matrix.test-package }}" -o flavour-3 --print-invalid-expressions-as-is
-                    pybind11-stubgen "${{ matrix.test-package }}" -o flavour-4 --numpy-array-use-type-var
-                    pybind11-stubgen "${{ matrix.test-package }}" --dry-run
+      - name: Generate stubs
+        shell: bash
+        run: |
+          pybind11-stubgen "${{ matrix.test-package }}" -o flavour-1 --numpy-array-wrap-with-annotated
+          pybind11-stubgen "${{ matrix.test-package }}" -o flavour-2 --numpy-array-remove-parameters
+          pybind11-stubgen "${{ matrix.test-package }}" -o flavour-3 --print-invalid-expressions-as-is
+          pybind11-stubgen "${{ matrix.test-package }}" -o flavour-4 --numpy-array-use-type-var
+          pybind11-stubgen "${{ matrix.test-package }}" --dry-run
 
-    publish:
-        name: Publish distribution
-        needs : [build, format, tests, test-cli-options]
-        if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
-        runs-on: ubuntu-latest
-        permissions:
-            # IMPORTANT: this permission is mandatory for Trusted Publishing
-            id-token: write
+  publish:
+    name: Publish distribution
+    needs: [build, format, tests, test-cli-options]
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: write
 
-        steps:
-        -   name: Download build artifacts
-            uses: actions/download-artifact@v6
-            with:
-                name: dist
-                path: dist
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist
 
-        -   name: Publish to PyPI
-            uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

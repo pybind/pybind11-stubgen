@@ -2,6 +2,22 @@
 
 set -e
 
+PYTHON_EXECUTABLE=$(python -c 'import sys; print(sys.executable)')
+
+resolve_path() {
+  local path="$1"
+
+  while [ -L "$path" ]; do
+    path="$(readlink "$path")"
+  done
+
+  if [ -d "$path" ]; then
+    (cd "$path" && pwd -P)
+  else
+    (cd "$(dirname "$path")" && echo "$(pwd -P)/$(basename "$path")")
+  fi
+}
+
 function parse_args() {
 
   CLEAR='\033[0m'
@@ -30,8 +46,8 @@ function parse_args() {
   if [ -z "$STUBS_SUB_DIR" ]; then usage "STUBS_SUB_DIR is not set"; fi;
   if [ -z "$NUMPY_FORMAT" ]; then usage "NUMPY_FORMAT is not set"; fi;
 
-  TESTS_ROOT="$(readlink -m "$(dirname "$0")")"
-  STUBS_DIR=$(readlink -m "${TESTS_ROOT}/${STUBS_SUB_DIR}")
+  TESTS_ROOT="$(resolve_path "$(dirname "$0")")"
+  STUBS_DIR=$(resolve_path "${TESTS_ROOT}/${STUBS_SUB_DIR}")
 }
 
 remove_stubs() {
@@ -39,7 +55,7 @@ remove_stubs() {
 }
 
 run_stubgen() {
-  pybind11-stubgen \
+  ${PYTHON_EXECUTABLE} -m pybind11_stubgen \
       demo \
       --output-dir=${STUBS_DIR} \
       ${NUMPY_FORMAT} \

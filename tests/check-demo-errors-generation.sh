@@ -2,7 +2,21 @@
 
 set -e
 
-TESTS_ROOT="$(readlink -m "$(dirname "$0")")"
+resolve_path() {
+  local path="$1"
+
+  while [ -L "$path" ]; do
+    path="$(readlink "$path")"
+  done
+
+  if [ -d "$path" ]; then
+    (cd "$path" && pwd -P)
+  else
+    (cd "$(dirname "$path")" && echo "$(pwd -P)/$(basename "$path")")
+  fi
+}
+
+TESTS_ROOT="$(resolve_path "$(dirname "$0")")"
 DEMO_ERRORS_FILE="${TESTS_ROOT}/demo.errors.stderr.txt"
 STUBS_DIR="/tmp/out" # Stubs should never be actually written
 
@@ -32,7 +46,8 @@ run_stubgen() {
 }
 
 remove_randomness_in_errors (){
-  sed -i 's/0x[0-9a-f]*/0x1234abcd5678/gi' "${DEMO_ERRORS_FILE}"
+  sed -E -i.bak 's/0x[0-9A-Fa-f]+/0x1234abcd5678/g' "$DEMO_ERRORS_FILE"
+  rm -f "${DEMO_ERRORS_FILE}.bak"
 }
 
 main () {

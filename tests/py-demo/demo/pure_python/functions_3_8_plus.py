@@ -10,5 +10,4 @@ def args_mix(
     x: int = 1,
     y=int,
     **kwargs: typing.Dict[int, str],
-):
-    ...
+): ...

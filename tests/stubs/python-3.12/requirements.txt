@@ -1,4 +1,4 @@
-black==22.8.0
+black==26.1.0
 cmeel-eigen==3.4.0.2
 isort==5.10.1
 numpy~=1.20
