@@ -2,7 +2,7 @@
 
 set -e
 
-if [ "$#" -le 1 ]; then
+if [ "$#" -lt 1 ]; then
     echo "Usage: $0 pybind11-vX.Y [path]"
     exit 1
 fi
