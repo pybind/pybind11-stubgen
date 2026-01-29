@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing
 
 import numpy
+import numpy.typing
 import scipy.sparse
 
 __all__: list[str] = [
@@ -20,53 +21,51 @@ __all__: list[str] = [
     "sparse_matrix_c",
     "sparse_matrix_r",
 ]
-M = typing.TypeVar("M", bound=int)
-N = typing.TypeVar("N", bound=int)
 
 def accept_matrix_int(
-    arg0: numpy.ndarray[
-        tuple[typing.Literal[3], typing.Literal[3]], numpy.dtype[numpy.int32]
-    ],
+    arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.int32, "[3, 3]"],
 ) -> None: ...
 def accept_vector_float64(
-    arg0: numpy.ndarray[
-        tuple[typing.Literal[3], typing.Literal[1]], numpy.dtype[numpy.float64]
-    ],
+    arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"],
 ) -> None: ...
 def dense_matrix_c(
-    arg0: numpy.ndarray[tuple[M, N], numpy.dtype[numpy.float32]],
-) -> numpy.ndarray[tuple[M, N], numpy.dtype[numpy.float32]]: ...
+    arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float32, "[m, n]"],
+) -> typing.Annotated[numpy.typing.NDArray[numpy.float32], "[m, n]"]: ...
 def dense_matrix_r(
-    arg0: numpy.ndarray[tuple[M, N], numpy.dtype[numpy.float32]],
-) -> numpy.ndarray[tuple[M, N], numpy.dtype[numpy.float32]]: ...
+    arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float32, "[m, n]"],
+) -> typing.Annotated[numpy.typing.NDArray[numpy.float32], "[m, n]"]: ...
 def fixed_mutator_a(
-    arg0: numpy.ndarray[
-        tuple[typing.Literal[5], typing.Literal[6]], numpy.dtype[numpy.float32]
+    arg0: typing.Annotated[
+        numpy.typing.NDArray[numpy.float32], "[5, 6]", "flags.writeable"
     ],
 ) -> None: ...
 def fixed_mutator_c(
-    arg0: numpy.ndarray[
-        tuple[typing.Literal[5], typing.Literal[6]], numpy.dtype[numpy.float32]
+    arg0: typing.Annotated[
+        numpy.typing.NDArray[numpy.float32],
+        "[5, 6]",
+        "flags.writeable",
+        "flags.f_contiguous",
     ],
 ) -> None: ...
 def fixed_mutator_r(
-    arg0: numpy.ndarray[
-        tuple[typing.Literal[5], typing.Literal[6]], numpy.dtype[numpy.float32]
+    arg0: typing.Annotated[
+        numpy.typing.NDArray[numpy.float32],
+        "[5, 6]",
+        "flags.writeable",
+        "flags.c_contiguous",
     ],
 ) -> None: ...
 def four_col_matrix_r(
-    arg0: numpy.ndarray[tuple[M, typing.Literal[4]], numpy.dtype[numpy.float32]],
-) -> numpy.ndarray[tuple[M, typing.Literal[4]], numpy.dtype[numpy.float32]]: ...
+    arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float32, "[m, 4]"],
+) -> typing.Annotated[numpy.typing.NDArray[numpy.float32], "[m, 4]"]: ...
 def four_row_matrix_r(
-    arg0: numpy.ndarray[tuple[typing.Literal[4], N], numpy.dtype[numpy.float32]],
-) -> numpy.ndarray[tuple[typing.Literal[4], N], numpy.dtype[numpy.float32]]: ...
+    arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float32, "[4, n]"],
+) -> typing.Annotated[numpy.typing.NDArray[numpy.float32], "[4, n]"]: ...
 def get_matrix_int() -> (
-    numpy.ndarray[tuple[typing.Literal[3], typing.Literal[3]], numpy.dtype[numpy.int32]]
+    typing.Annotated[numpy.typing.NDArray[numpy.int32], "[3, 3]"]
 ): ...
 def get_vector_float64() -> (
-    numpy.ndarray[
-        tuple[typing.Literal[3], typing.Literal[1]], numpy.dtype[numpy.float64]
-    ]
+    typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]
 ): ...
 def sparse_matrix_c(arg0: scipy.sparse.csc_matrix) -> scipy.sparse.csc_matrix: ...
 def sparse_matrix_r(arg0: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix: ...

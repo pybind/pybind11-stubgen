@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+import collections.abc
 import typing
-
-import pybind11_stubgen.typing_ext
 
 __all__: list[str] = [
     "std_array",
@@ -13,9 +12,17 @@ __all__: list[str] = [
 ]
 
 def std_array(
-    arg0: typing.Annotated[list[int], pybind11_stubgen.typing_ext.FixedSize(3)],
-) -> typing.Annotated[list[int], pybind11_stubgen.typing_ext.FixedSize(3)]: ...
+    arg0: typing.Annotated[
+        collections.abc.Sequence[typing.SupportsInt], "FixedSize(3)"
+    ],
+) -> typing.Annotated[list[int], "FixedSize(3)"]: ...
 def std_map() -> dict[int, complex]: ...
-def std_optional(arg0: int | None) -> None: ...
-def std_variant(arg0: int | float | tuple[int, int]) -> None: ...
+def std_optional(arg0: typing.SupportsInt | None) -> None: ...
+def std_variant(
+    arg0: (
+        typing.SupportsInt
+        | typing.SupportsFloat
+        | tuple[typing.SupportsInt, typing.SupportsInt]
+    ),
+) -> None: ...
 def std_vector() -> list[tuple[int, float]]: ...
