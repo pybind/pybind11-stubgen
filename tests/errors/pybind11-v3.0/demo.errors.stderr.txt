@@ -1,0 +1,15 @@
+pybind11_stubgen - [  ERROR] In demo._bindings.aliases.foreign_enum_default : Invalid expression '<ConsoleForegroundColor.Blue: 34>'
+pybind11_stubgen - [  ERROR] In demo._bindings.enum.accept_defaulted_enum : Invalid expression '<ConsoleForegroundColor.None_: -1>'
+pybind11_stubgen - [  ERROR] In demo._bindings.flawed_bindings.accept_unbound_enum : Invalid expression '(anonymous namespace)::Enum'
+pybind11_stubgen - [  ERROR] In demo._bindings.flawed_bindings.accept_unbound_enum_defaulted : Invalid expression '<demo._bindings.flawed_bindings.Enum object at 0x1234abcd5678>'
+pybind11_stubgen - [  ERROR] In demo._bindings.flawed_bindings.accept_unbound_type : Invalid expression '(anonymous namespace)::Unbound'
+pybind11_stubgen - [  ERROR] In demo._bindings.flawed_bindings.accept_unbound_type_defaulted : Invalid expression '<demo._bindings.flawed_bindings.Unbound object at 0x1234abcd5678>'
+pybind11_stubgen - [  ERROR] In demo._bindings.flawed_bindings.get_unbound_type : Invalid expression '(anonymous namespace)::Unbound'
+pybind11_stubgen - [WARNING] Enum-like str representations were found with no matching mapping to the enum class location.
+Use `--enum-class-locations` to specify full path to the following enum(s):
+ - ConsoleForegroundColor
+pybind11_stubgen - [WARNING] Raw C++ types/values were found in signatures extracted from docstrings.
+Please check the corresponding sections of pybind11 documentation to avoid common mistakes in binding code:
+ - https://pybind11.readthedocs.io/en/latest/advanced/misc.html#avoiding-cpp-types-in-docstrings
+ - https://pybind11.readthedocs.io/en/latest/advanced/functions.html#default-arguments-revisited
+pybind11_stubgen - [   INFO] Terminating due to previous errors

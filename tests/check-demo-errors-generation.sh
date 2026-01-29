@@ -2,8 +2,13 @@
 
 set -e
 
+if [ "$#" -le 1 ]; then
+    echo "Usage: $0 pybind11-vX.Y [path]"
+    exit 1
+fi
+
 resolve_path() {
-  local path="$1"
+  local path="$2"
 
   while [ -L "$path" ]; do
     path="$(readlink "$path")"
@@ -17,7 +22,8 @@ resolve_path() {
 }
 
 TESTS_ROOT="$(resolve_path "$(dirname "$0")")"
-DEMO_ERRORS_FILE="${TESTS_ROOT}/demo.errors.stderr.txt"
+ERRORS_ROOT="$(readlink -m "${TESTS_ROOT}/errors/$1")"
+DEMO_ERRORS_FILE="${ERRORS_ROOT}/demo.errors.stderr.txt"
 STUBS_DIR="/tmp/out" # Stubs should never be actually written
 
 remove_demo_errors() {

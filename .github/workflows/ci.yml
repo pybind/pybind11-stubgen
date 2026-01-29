@@ -196,7 +196,7 @@ jobs:
 
       - name: Check error generation
         shell: bash
-        run: ./tests/check-demo-errors-generation.sh
+        run: ./tests/check-demo-errors-generation.sh "pybind11-${{ matrix.config.pybind11-branch }}"
 
   test-cli-options:
     name: "Runs on 🐍 ${{ matrix.python }} • ${{ matrix.test-package }}"
