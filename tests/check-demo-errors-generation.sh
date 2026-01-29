@@ -22,7 +22,7 @@ resolve_path() {
 }
 
 TESTS_ROOT="$(resolve_path "$(dirname "$0")")"
-ERRORS_ROOT="$(readlink -m "${TESTS_ROOT}/errors/$1")"
+ERRORS_ROOT="$(resolve_path "${TESTS_ROOT}/errors/$1")"
 DEMO_ERRORS_FILE="${ERRORS_ROOT}/demo.errors.stderr.txt"
 STUBS_DIR="/tmp/out" # Stubs should never be actually written
 
