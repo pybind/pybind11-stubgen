@@ -67,6 +67,36 @@ jobs:
         config:
           [
             {
+              pybind11-branch: "v3.0",
+              python: "3.13",
+              numpy-format: "numpy-array-use-type-var",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v3.0",
+              python: "3.13",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v3.0",
+              python: "3.12",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v3.0",
+              python: "3.11",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
+              pybind11-branch: "v3.0",
+              python: "3.10",
+              numpy-format: "numpy-array-wrap-with-annotated",
+              cmake-version: "4.2.x",
+            },
+            {
               pybind11-branch: "v2.13",
               python: "3.13",
               numpy-format: "numpy-array-use-type-var",
