@@ -40,7 +40,6 @@ logger = getLogger("pybind11_stubgen")
 
 
 class RemoveSelfAnnotation(IParser):
-
     __any_t_name = QualifiedName.from_str("Any")
     __typing_any_t_name = QualifiedName.from_str("typing.Any")
 

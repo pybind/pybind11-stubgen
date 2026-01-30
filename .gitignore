@@ -210,6 +210,9 @@ cython_debug/
 # VS Code
 .vscode/
 
+# Zed
+.zed/
+
 tmp
 *.patch
 *.zip

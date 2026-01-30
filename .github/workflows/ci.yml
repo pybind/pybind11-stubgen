@@ -5,7 +5,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
     tags:
       - "v*"
 
@@ -19,11 +19,14 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install build
-        run: python -m pip --disable-pip-version-check install build
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Build sdist + wheel
-        run: python -m build
+        run: |
+          uv build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
@@ -42,19 +45,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Install requirements
-        run: pip install -r requirements-dev.txt
-      - name: Run isort
-        run: isort --check --profile=black --diff ./pybind11_stubgen
+        run: uv sync
+      - name: Run Ruff as isort
+        run: ruff check --select I,RUF022 --fix . --diff ./pybind11_stubgen
         if: ${{ failure() ||  success() }}
-      - name: Run black
-        run: black --diff ./pybind11_stubgen
+      - name: Run Ruff format
+        run: ruff format --diff ./pybind11_stubgen
         if: ${{ failure() ||  success() }}
-      - name: Run flake8
+      - name: Run Ruff
         run: |
-          flake8 \
-            --max-line-length=88 \
-            --extend-ignore=E203 \
-            --extend-exclude=venv/,.pytest_cache/,.ipynb_checkpoints/,tests/,tmp/,build/
+          ruff check --ignore F401,F821 .
         if: ${{ failure() ||  success() }}
 
   tests:
@@ -162,7 +162,6 @@ jobs:
       - name: Update CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          # https://github.com/pybind/pybind11/blob/914c06fb252b6cc3727d0eedab6736e88a3fcb01/CMakeLists.txt#L13C34-L13C38
           cmake-version: ${{ matrix.config.cmake-version }}
 
       - name: Setup annotations on Linux
@@ -170,12 +169,12 @@ jobs:
         run: python -m pip install pytest-github-actions-annotate-failures
 
       - name: Install requirements
-        run: pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
+        run: uv pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
 
       - name: Install
         shell: bash
         working-directory: dist
-        run: python -m pip --disable-pip-version-check install *.whl
+        run: uv pip --disable-pip-version-check install *.whl
 
       - name: Install demo module
         shell: bash

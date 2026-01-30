@@ -18,6 +18,17 @@ dynamic = ["readme"]
 Repository = "https://github.com/pybind/pybind11-stubgen"
 Issues = "https://github.com/pybind/pybind11-stubgen/issues"
 
+[dependency-groups]
+dev = [
+    "cmeel==0.59.0",
+    "numpy~=1.20",
+    "pip",
+    "scipy~=1.0",
+    "typing_extensions>=4,<5",
+    "mypy>=1.19.1",
+    "ruff>=0.14.14",
+]
+
 [tool.setuptools.packages]
 find = {}
 
@@ -26,3 +37,17 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [project.entry-points.console_scripts]
 pybind11-stubgen = "pybind11_stubgen.__init__:main"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+ignore = ["F403"]  # undefined names imported (triggered by native extensions)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 88
