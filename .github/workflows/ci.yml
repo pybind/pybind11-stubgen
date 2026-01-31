@@ -179,7 +179,7 @@ jobs:
 
       - name: Create UV venv
         run: |
-          uv venv
+          uv venv .venv
 
       - name: Setup annotations on Linux
         if: runner.os == 'Linux'
@@ -191,7 +191,7 @@ jobs:
       - name: Install
         shell: bash
         working-directory: dist
-        run: uv pip install --disable-pip-version-check *.whl --system
+        run: uv pip install --disable-pip-version-check *.whl
 
       - name: Install demo module
         shell: bash
@@ -246,18 +246,22 @@ jobs:
           name: dist
           path: dist
 
+      - name: Create UV venv
+        run: |
+          uv venv .venv
+
       - name: Setup annotations on Linux
         if: runner.os == 'Linux'
-        run: uv pip install pytest-github-actions-annotate-failures --system
+        run: uv pip install pytest-github-actions-annotate-failures
 
       - name: Install
         shell: bash
         working-directory: dist
-        run: uv pip install --disable-pip-version-check *.whl --system
+        run: uv pip install --disable-pip-version-check *.whl
 
       - name: "Install ${{ matrix.test-package }}"
         shell: bash
-        run: uv pip install "${{ matrix.test-package }}" --system
+        run: uv pip install "${{ matrix.test-package }}"
 
       - name: Generate stubs
         shell: bash
