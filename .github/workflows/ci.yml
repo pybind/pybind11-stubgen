@@ -25,7 +25,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Install requirements
-        run: uv sync
+        run: |
+          uv lock --check
+          uv sync
       - name: Run Ruff as isort
         run: ruff check --select I,RUF022 --fix . --diff ./pybind11_stubgen
         if: ${{ failure() ||  success() }}
@@ -54,6 +56,7 @@ jobs:
 
       - name: Build sdist + wheel
         run: |
+          uv lock --check
           uv build
 
       - name: Upload build artifacts
@@ -258,7 +261,7 @@ jobs:
 
   publish:
     name: Publish distribution
-    needs: [build, format, tests, test-cli-options]
+    needs: [check, build, tests, test-cli-options]
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     runs-on: ubuntu-latest
     permissions:
