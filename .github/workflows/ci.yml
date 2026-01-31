@@ -177,6 +177,10 @@ jobs:
         with:
           cmake-version: ${{ matrix.config.cmake-version }}
 
+      - name: Create UV venv
+        run: |
+          uv venv
+
       - name: Setup annotations on Linux
         if: runner.os == 'Linux'
         run: uv pip install pytest-github-actions-annotate-failures
@@ -230,6 +234,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Download build artifacts
         uses: actions/download-artifact@v6
