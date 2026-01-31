@@ -18,6 +18,7 @@ resolve_path() {
   fi
 }
 
+
 function parse_args() {
 
   CLEAR='\033[0m'
