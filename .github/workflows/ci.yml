@@ -29,7 +29,7 @@ jobs:
           uv lock --check
           uv sync
       - name: Run Ruff as isort
-        run: uv run ruff check --select I,RUF022 --fix . --diff ./pybind11_stubgen
+        run: uv run ruff check --select I,RUF022 --fix --diff ./pybind11_stubgen
         if: ${{ failure() ||  success() }}
       - name: Run Ruff format
         run: uv run ruff format --diff ./pybind11_stubgen
