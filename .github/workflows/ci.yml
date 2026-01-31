@@ -29,14 +29,14 @@ jobs:
           uv lock --check
           uv sync
       - name: Run Ruff as isort
-        run: ruff check --select I,RUF022 --fix . --diff ./pybind11_stubgen
+        run: uv run ruff check --select I,RUF022 --fix . --diff ./pybind11_stubgen
         if: ${{ failure() ||  success() }}
       - name: Run Ruff format
-        run: ruff format --diff ./pybind11_stubgen
+        run: uv run ruff format --diff ./pybind11_stubgen
         if: ${{ failure() ||  success() }}
       - name: Run Ruff
         run: |
-          ruff check --ignore F401,F821 .
+          uv run ruff check --ignore F401,F821 .
         if: ${{ failure() ||  success() }}
 
   build:
@@ -179,15 +179,15 @@ jobs:
 
       - name: Setup annotations on Linux
         if: runner.os == 'Linux'
-        run: python -m pip install pytest-github-actions-annotate-failures
+        run: uv pip install pytest-github-actions-annotate-failures
 
       - name: Install requirements
-        run: uv pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
+        run: uv pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt" --system
 
       - name: Install
         shell: bash
         working-directory: dist
-        run: uv pip --disable-pip-version-check install *.whl
+        run: uv pip --disable-pip-version-check install *.whl --system
 
       - name: Install demo module
         shell: bash
@@ -239,20 +239,21 @@ jobs:
 
       - name: Setup annotations on Linux
         if: runner.os == 'Linux'
-        run: python -m pip install pytest-github-actions-annotate-failures
+        run: uv pip install pytest-github-actions-annotate-failures --system
 
       - name: Install
         shell: bash
         working-directory: dist
-        run: python -m pip --disable-pip-version-check install *.whl
+        run: uv pip --disable-pip-version-check install *.whl --system
 
       - name: "Install ${{ matrix.test-package }}"
         shell: bash
-        run: pip install "${{ matrix.test-package }}"
+        run: uv pip install "${{ matrix.test-package }}" --system
 
       - name: Generate stubs
         shell: bash
         run: |
+          source .venv/bin/activate
           pybind11-stubgen "${{ matrix.test-package }}" -o flavour-1 --numpy-array-wrap-with-annotated
           pybind11-stubgen "${{ matrix.test-package }}" -o flavour-2 --numpy-array-remove-parameters
           pybind11-stubgen "${{ matrix.test-package }}" -o flavour-3 --print-invalid-expressions-as-is
