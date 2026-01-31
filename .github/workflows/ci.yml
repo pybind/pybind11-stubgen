@@ -191,7 +191,7 @@ jobs:
       - name: Install
         shell: bash
         working-directory: dist
-        run: uv pip --disable-pip-version-check install *.whl --system
+        run: uv pip install --disable-pip-version-check *.whl --system
 
       - name: Install demo module
         shell: bash
@@ -253,7 +253,7 @@ jobs:
       - name: Install
         shell: bash
         working-directory: dist
-        run: uv pip --disable-pip-version-check install *.whl --system
+        run: uv pip install --disable-pip-version-check *.whl --system
 
       - name: "Install ${{ matrix.test-package }}"
         shell: bash
