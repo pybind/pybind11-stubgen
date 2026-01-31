@@ -2,8 +2,6 @@
 
 set -e
 
-PYTHON_EXECUTABLE=$(python -c 'import sys; print(sys.executable)')
-
 resolve_path() {
   local path="$1"
 
@@ -55,7 +53,7 @@ remove_stubs() {
 }
 
 run_stubgen() {
-  ${PYTHON_EXECUTABLE} -m pybind11_stubgen \
+  uv run pybind11_stubgen \
       demo \
       --output-dir=${STUBS_DIR} \
       ${NUMPY_FORMAT} \
