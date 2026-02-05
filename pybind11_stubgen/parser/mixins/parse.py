@@ -5,6 +5,7 @@ import inspect
 import re
 import types
 from typing import Any, Callable, TypeVar
+import sys
 
 from pybind11_stubgen.parser.errors import (
     InvalidExpressionError,
@@ -628,9 +629,12 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
         if len(doc_lines) == 0:
             return []
 
+        type_var_pattern = re.compile(r"(\[(?P<type_vars>[\w\s,]*)])?")
+
         top_signature_regex = re.compile(
-            rf"^{func_name}(\[(?P<type_vars>[\w\s,]*)])?"
-            rf"\((?P<args>.*)\)\s*(->\s*(?P<returns>.+))?$"
+            rf"^{func_name}" +
+            type_var_pattern.pattern * ((1, 12) <= sys.version_info) +
+            r"\((?P<args>.*)\)\s*(->\s*(?P<returns>.+))?$"
         )
 
         match = top_signature_regex.match(doc_lines[0])
@@ -668,9 +672,9 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
             ]
 
         overload_signature_regex = re.compile(
-            rf"^(\s*(?P<overload_number>\d+)\.\s*)"
-            rf"{func_name}(\[(?P<type_vars>[\w\s,]*)])?"
-            rf"\((?P<args>.*)\)\s*->\s*(?P<returns>.+)$"
+            rf"^(\s*(?P<overload_number>\d+)\.\s*){func_name}" +
+            type_var_pattern.pattern * ((1, 12) <= sys.version_info) +
+            r"\((?P<args>.*)\)\s*->\s*(?P<returns>.+)$"
         )
 
         doc_start = 0

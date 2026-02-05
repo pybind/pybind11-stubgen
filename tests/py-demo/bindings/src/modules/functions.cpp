@@ -102,7 +102,6 @@ void bind_functions_module(py::module &&m) {
     m.def("pass_callback", [](std::function<Foo(Foo &)> &callback) { return Foo(13); });
     m.def("nested_types", [](std::variant<std::list<Foo>, Foo> arg){ return arg; });
 
-#if PY_MAJOR_VERSION > 3 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 12)
     py::options options;
     options.disable_function_signatures();
     m.def(
@@ -129,6 +128,13 @@ void bind_functions_module(py::module &&m) {
             "3. passthrough3[T1, T2](obj1: T1, obj2: T2) -> tuple[T1, T2]\n"),
         py::arg("obj1") = py::none(),
         py::arg("obj2") = py::none());
-    options.enable_function_signatures();
+    m.def(
+        "passthrough_backwards",
+        [](py::object obj) { return obj; },
+#if PY_MAJOR_VERSION > 3 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 12)
+        py::doc("passthrough_backwards[T](obj: T) -> T\n"));
+#else
+        py::doc("passthrough_backwards(obj: T) -> T\n")
 #endif
+    options.enable_function_signatures();
 }
