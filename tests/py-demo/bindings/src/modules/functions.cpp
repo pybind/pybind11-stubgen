@@ -134,7 +134,7 @@ void bind_functions_module(py::module &&m) {
 #if PY_MAJOR_VERSION > 3 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 12)
         py::doc("passthrough_backwards[T](obj: T) -> T\n"));
 #else
-        py::doc("passthrough_backwards(obj: T) -> T\n")
+        py::doc("passthrough_backwards(obj: T) -> T\n"));
 #endif
     options.enable_function_signatures();
 }
