@@ -22,6 +22,10 @@ __all__: list[str] = [
     "mul",
     "nested_types",
     "pass_callback",
+    "passthrough1",
+    "passthrough2",
+    "passthrough3",
+    "passthrough_backwards",
     "pos_kw_only_mix",
     "pos_kw_only_variadic_mix",
 ]
@@ -63,6 +67,22 @@ def mul(p: typing.SupportsFloat, q: typing.SupportsFloat) -> float:
 
 def nested_types(arg0: collections.abc.Sequence[Foo] | Foo) -> list[Foo] | Foo: ...
 def pass_callback(arg0: collections.abc.Callable[[Foo], Foo]) -> Foo: ...
+def passthrough1(*args, **kwargs: typing.Any):
+    """
+    passthrough1[T](obj: T) -> T
+    """
+@typing.overload
+def passthrough2() -> None:
+    """
+    2. passthrough2[T](obj: T) -> T
+    """
+@typing.overload
+def passthrough3() -> tuple[None, None]:
+    """
+    2. passthrough3[T](obj: T) -> tuple[T, None]
+    3. passthrough3[T1, T2](obj1: T1, obj2: T2) -> tuple[T1, T2]
+    """
+def passthrough_backwards(obj: U) -> U:
 def pos_kw_only_mix(
     i: typing.SupportsInt, /, j: typing.SupportsInt, *, k: typing.SupportsInt
 ) -> tuple: ...

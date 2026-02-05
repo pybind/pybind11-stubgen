@@ -629,11 +629,9 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
         if len(doc_lines) == 0:
             return []
 
-        type_var_pattern = re.compile(r"(\[(?P<type_vars>[\w\s,]*)])?")
-
         top_signature_regex = re.compile(
-            rf"^{func_name}" +
-            type_var_pattern.pattern * ((1, 12) <= sys.version_info) +
+            rf"^{func_name}"
+            r"(\[(?P<type_vars>[\w\s,]*)])?"
             r"\((?P<args>.*)\)\s*(->\s*(?P<returns>.+))?$"
         )
 
@@ -644,9 +642,13 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
         if len(doc_lines) < 2 or doc_lines[1] != "Overloaded function.":
             # TODO: Update to support more complex formats.
             #  This only supports bare type parameters.
+            type_vars_group = match.group("type_vars")
+            if sys.version_info < (3, 12) and type_vars_group:
+                # This syntax is not supported before Python 3.12.
+                return []
             type_vars: list[str] = list(
                 filter(
-                    bool, map(str.strip, (match.group("type_vars") or "").split(","))
+                    bool, map(str.strip, (type_vars_group or "").split(","))
                 )
             )
             args = self.call_with_local_types(
@@ -672,8 +674,8 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
             ]
 
         overload_signature_regex = re.compile(
-            rf"^(\s*(?P<overload_number>\d+)\.\s*){func_name}" +
-            type_var_pattern.pattern * ((1, 12) <= sys.version_info) +
+            rf"^(\s*(?P<overload_number>\d+)\.\s*){func_name}"
+            r"(\[(?P<type_vars>[\w\s,]*)])?"
             r"\((?P<args>.*)\)\s*->\s*(?P<returns>.+)$"
         )
 
@@ -686,14 +688,19 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
             if match:
                 if match.group("overload_number") != f"{len(overloads)}":
                     continue
+                type_vars_group = match.group("type_vars")
+                if sys.version_info < (3, 12) and type_vars_group:
+                    # This syntax is not supported before Python 3.12.
+                    continue
                 overloads[-1].doc = self._strip_empty_lines(doc_lines[doc_start:i])
                 doc_start = i + 1
                 # TODO: Update to support more complex formats.
                 #  This only supports bare type parameters.
+
                 type_vars: list[str] = list(
                     filter(
                         bool,
-                        map(str.strip, (match.group("type_vars") or "").split(",")),
+                        map(str.strip, (type_vars_group or "").split(",")),
                     )
                 )
                 args = self.call_with_local_types(
