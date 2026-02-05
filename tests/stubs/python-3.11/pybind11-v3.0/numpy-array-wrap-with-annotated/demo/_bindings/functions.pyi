@@ -68,7 +68,7 @@ def mul(p: typing.SupportsFloat, q: typing.SupportsFloat) -> float:
 
 def nested_types(arg0: collections.abc.Sequence[Foo] | Foo) -> list[Foo] | Foo: ...
 def pass_callback(arg0: collections.abc.Callable[[Foo], Foo]) -> Foo: ...
-def passthrough1(*args, **kwargs: typing.Any):
+def passthrough1(*args, **kwargs):
     """
     passthrough1[T](obj: T) -> T
     """
