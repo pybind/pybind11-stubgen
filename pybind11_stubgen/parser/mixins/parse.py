@@ -3,9 +3,9 @@ from __future__ import annotations
 import ast
 import inspect
 import re
+import sys
 import types
 from typing import Any, Callable, TypeVar
-import sys
 
 from pybind11_stubgen.parser.errors import (
     InvalidExpressionError,
