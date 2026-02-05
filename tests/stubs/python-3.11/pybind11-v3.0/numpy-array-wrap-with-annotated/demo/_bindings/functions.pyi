@@ -5,6 +5,7 @@ import typing
 
 __all__: list[str] = [
     "Foo",
+    "U",
     "accept_annotated_callable",
     "accept_callable",
     "accept_frozenset",
@@ -71,18 +72,21 @@ def passthrough1(*args, **kwargs: typing.Any):
     """
     passthrough1[T](obj: T) -> T
     """
+
 @typing.overload
 def passthrough2() -> None:
     """
     2. passthrough2[T](obj: T) -> T
     """
+
 @typing.overload
 def passthrough3() -> tuple[None, None]:
     """
     2. passthrough3[T](obj: T) -> tuple[T, None]
     3. passthrough3[T1, T2](obj1: T1, obj2: T2) -> tuple[T1, T2]
     """
-def passthrough_backwards(obj: U) -> U:
+
+def passthrough_backwards(obj: U) -> U:...
 def pos_kw_only_mix(
     i: typing.SupportsInt, /, j: typing.SupportsInt, *, k: typing.SupportsInt
 ) -> tuple: ...
@@ -94,3 +98,5 @@ def pos_kw_only_variadic_mix(
     k: typing.SupportsInt,
     **kwargs,
 ) -> tuple: ...
+
+U: typing.TypeVar  # value = ~U
