@@ -36,7 +36,7 @@ pybind11-stubgen [-h]
                  [--print-safe-value-reprs REGEX]
                  [--exit-code]
                  [--stub-extension EXT]
-                 MODULE_NAME
+                 MODULE_NAME [MODULE_NAMES ...]
 ```
 
 Contributing
