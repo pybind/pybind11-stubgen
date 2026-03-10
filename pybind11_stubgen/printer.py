@@ -217,7 +217,7 @@ class Printer:
         if module.doc is not None:
             result.extend(self.print_docstring(module.doc))
 
-        for import_ in sorted(module.imports, key=lambda x: x.origin):
+        for import_ in sorted(module.imports, key=lambda x: (x.origin, x.name or "")):
             result.extend(self.print_import(import_))
 
         for sub_module in module.sub_modules:
