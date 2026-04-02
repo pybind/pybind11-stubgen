@@ -493,17 +493,19 @@ class FixValueReprRandomAddress(IParser):
     repr examples:
         <capsule object NULL at 0x7fdfdf8b5f20> # PyCapsule
         <foo.bar.Baz object at 0x7fdfdf8b5f20>
+        <WeakKeyDictionary at 0x7f89ddd7ecf0>  # no "object" keyword
     """
 
     _pattern = re.compile(
-        r"<(?P<name>[\w.]+) object "
-        r"(?P<capsule>\w+\s)*at "
-        r"(?P<address>0x[a-fA-F0-9]+)>"
+        r"<(?P<name>[\w.]+(?:\s+object)?)"
+        r"(?:\s+\w+)*"
+        r"\s+at\s+"
+        r"0x[a-fA-F0-9]+>"
     )
 
     def handle_value(self, value: Any) -> Value:
         result = super().handle_value(value)
-        result.repr = self._pattern.sub(r"<\g<name> object>", result.repr)
+        result.repr = self._pattern.sub(r"<\g<name>>", result.repr)
         return result
 
 
