@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import sys
 
 from pybind11_stubgen.structs import (
@@ -24,14 +25,79 @@ from pybind11_stubgen.structs import (
     Value,
 )
 
+log = logging.getLogger("pybind11_stubgen")
+
 
 def indent_lines(lines: list[str], by=4) -> list[str]:
     return [" " * by + line for line in lines]
 
 
+def _topological_sort_classes(classes: list[Class]) -> list[Class]:
+    """Sort classes so that base classes appear before derived classes.
+
+    Uses Kahn's algorithm. Ties are broken by input position for stability.
+    External bases (not in the current scope) are ignored.
+    """
+    if not classes:
+        return classes
+
+    name_to_index = {c.name: i for i, c in enumerate(classes)}
+    name_to_class = {c.name: c for c in classes}
+
+    # Build adjacency list: base -> [derived, ...]
+    # and in-degree count for each class
+    children: dict[str, list[str]] = {c.name: [] for c in classes}
+    in_degree: dict[str, int] = {c.name: 0 for c in classes}
+
+    for c in classes:
+        for base in c.bases:
+            base_name = str(base[-1])
+            if base_name in name_to_class:
+                children[base_name].append(c.name)
+                in_degree[c.name] += 1
+
+    # Initialize queue with zero in-degree classes, sorted by input position
+    queue = sorted(
+        [name for name, deg in in_degree.items() if deg == 0],
+        key=lambda n: name_to_index[n],
+    )
+
+    result = []
+    while queue:
+        name = queue.pop(0)
+        result.append(name_to_class[name])
+        # Sort children by input position for stable ordering
+        for child in sorted(children[name], key=lambda n: name_to_index[n]):
+            in_degree[child] -= 1
+            if in_degree[child] == 0:
+                queue.append(child)
+        # Re-sort queue to maintain input-position priority
+        queue.sort(key=lambda n: name_to_index[n])
+
+    if len(result) < len(classes):
+        remaining = [c for c in classes if c.name not in {r.name for r in result}]
+        log.warning(
+            "Cycle detected in class inheritance involving: %s. "
+            "Appending in original order.",
+            [c.name for c in remaining],
+        )
+        result.extend(remaining)
+
+    return result
+
+
 class Printer:
-    def __init__(self, invalid_expr_as_ellipses: bool):
+    def __init__(self, invalid_expr_as_ellipses: bool, sort_by: str = "definition"):
         self.invalid_expr_as_ellipses = invalid_expr_as_ellipses
+        self.sort_by = sort_by
+
+    def _order_classes(self, classes: list[Class]) -> list[Class]:
+        if self.sort_by == "alphabetical":
+            return sorted(classes, key=lambda c: c.name)
+        elif self.sort_by == "definition":
+            return classes
+        else:  # "topological"
+            return _topological_sort_classes(classes)
 
     def print_alias(self, alias: Alias) -> list[str]:
         return [f"{alias.name} = {alias.origin}"]
@@ -90,7 +156,7 @@ class Printer:
         if class_.doc is not None:
             result.extend(self.print_docstring(class_.doc))
 
-        for sub_class in sorted(class_.classes, key=lambda c: c.name):
+        for sub_class in self._order_classes(class_.classes):
             result.extend(self.print_class(sub_class))
 
         modifier_order: dict[Modifier, int] = {
@@ -232,7 +298,7 @@ class Printer:
         for type_var in sorted(module.type_vars, key=lambda t: t.name):
             result.extend(self.print_type_var(type_var))
 
-        for class_ in sorted(module.classes, key=lambda c: c.name):
+        for class_ in self._order_classes(module.classes):
             result.extend(self.print_class(class_))
 
         for func in sorted(module.functions, key=lambda f: f.name):

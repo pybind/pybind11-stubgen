@@ -89,7 +89,7 @@ class ParserDispatchMixin(IParser):
         self, path: QualifiedName, module: types.ModuleType
     ) -> Module | None:
         result = Module(name=path[-1])
-        for name, member in inspect.getmembers(module):
+        for name, member in module.__dict__.items():
             obj = self.handle_module_member(
                 QualifiedName([*path, Identifier(name)]), module, member
             )
@@ -647,9 +647,7 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
                 # This syntax is not supported before Python 3.12.
                 return []
             type_vars: list[str] = list(
-                filter(
-                    bool, map(str.strip, (type_vars_group or "").split(","))
-                )
+                filter(bool, map(str.strip, (type_vars_group or "").split(",")))
             )
             args = self.call_with_local_types(
                 type_vars, lambda: self.parse_args_str(match.group("args"))
