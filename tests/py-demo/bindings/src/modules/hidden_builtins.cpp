@@ -2,10 +2,6 @@
 
 #include <pybind11/pytypes.h>
 
-namespace hidden_builtins_detail {
-
-};
-
 void bind_hidden_builtins_module(py::module&& m) {
   py::dict readonly_dict{};
 

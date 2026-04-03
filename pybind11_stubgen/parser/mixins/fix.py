@@ -310,7 +310,11 @@ class FixBuiltinTypes(IParser):
                 annotation = hidden_builtin_override or "types.%s" % hidden_builtin
 
                 override_t = self.parse_annotation_str(annotation)
-                assert isinstance(override_t, ResolvedType)
+                if not isinstance(override_t, ResolvedType):
+                    raise TypeError(
+                        f"Expected ResolvedType for {annotation!r}, "
+                        f"got {type(override_t).__name__}"
+                    )
                 return override_t.name
 
             return QualifiedName(result[1:])
