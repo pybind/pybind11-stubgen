@@ -33,3 +33,14 @@ class NameResolutionError(ParserError):
 
     def __str__(self):
         return f"Can't find/import '{self.name}'"
+
+
+class InspectError(ParserError):
+    def __init__(self, path: QualifiedName, class_: type, msg: str):
+        super().__init__()
+        self.path = path
+        self.class_ = class_
+        self.msg = msg
+
+    def __str__(self):
+        return f"Can't get members of type {self.class_} at {self.path}: {self.msg}"

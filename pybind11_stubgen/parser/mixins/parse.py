@@ -8,6 +8,7 @@ import types
 from typing import Any, Callable, TypeVar
 
 from pybind11_stubgen.parser.errors import (
+    InspectError,
     InvalidExpressionError,
     InvalidIdentifierError,
     NameResolutionError,
@@ -48,26 +49,31 @@ class ParserDispatchMixin(IParser):
     def handle_class(self, path: QualifiedName, class_: type) -> Class | None:
         base_classes = class_.__bases__
         result = Class(name=path[-1], bases=self.handle_bases(path, base_classes))
-        for name, member in inspect.getmembers(class_):
-            obj = self.handle_class_member(
-                QualifiedName([*path, Identifier(name)]), class_, member
-            )
-            if isinstance(obj, Docstring):
-                result.doc = obj
-            elif isinstance(obj, Alias):
-                result.aliases.append(obj)
-            elif isinstance(obj, Field):
-                result.fields.append(obj)
-            elif isinstance(obj, Class):
-                result.classes.append(obj)
-            elif isinstance(obj, list):  # list[Method]
-                result.methods.extend(obj)
-            elif isinstance(obj, Property):
-                result.properties.append(obj)
-            elif obj is None:
-                pass
-            else:
-                raise AssertionError()
+        try:
+            members = inspect.getmembers(class_)
+        except TypeError as e:
+            self.report_error(InspectError(path, class_, str(e)))
+        else:
+            for name, member in members:
+                obj = self.handle_class_member(
+                    QualifiedName([*path, Identifier(name)]), class_, member
+                )
+                if isinstance(obj, Docstring):
+                    result.doc = obj
+                elif isinstance(obj, Alias):
+                    result.aliases.append(obj)
+                elif isinstance(obj, Field):
+                    result.fields.append(obj)
+                elif isinstance(obj, Class):
+                    result.classes.append(obj)
+                elif isinstance(obj, list):  # list[Method]
+                    result.methods.extend(obj)
+                elif isinstance(obj, Property):
+                    result.properties.append(obj)
+                elif obj is None:
+                    pass
+                else:
+                    raise AssertionError()
         return result
 
     def handle_class_member(
