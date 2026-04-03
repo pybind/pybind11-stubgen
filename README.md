@@ -35,6 +35,7 @@ pybind11-stubgen [-h]
                  [--print-invalid-expressions-as-is]
                  [--print-safe-value-reprs REGEX]
                  [--exit-code]
+                 [--sort-by {definition,topological}]
                  [--stub-extension EXT]
                  MODULE_NAME [MODULE_NAMES ...]
 ```
