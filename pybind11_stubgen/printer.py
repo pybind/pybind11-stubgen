@@ -92,9 +92,7 @@ class Printer:
         self.sort_by = sort_by
 
     def _order_classes(self, classes: list[Class]) -> list[Class]:
-        if self.sort_by == "alphabetical":
-            return sorted(classes, key=lambda c: c.name)
-        elif self.sort_by == "definition":
+        if self.sort_by == "definition":
             return classes
         else:  # "topological"
             return _topological_sort_classes(classes)
