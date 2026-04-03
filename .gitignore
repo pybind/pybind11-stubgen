@@ -213,3 +213,4 @@ cython_debug/
 tmp
 *.patch
 *.zip
+.aider*
