@@ -32,36 +32,57 @@ __all__: list[str] = [
 ]
 
 class Foo:
-    def __init__(self, arg0: typing.SupportsInt) -> None: ...
+    def __init__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None: ...
 
 def accept_annotated_callable(
-    arg0: collections.abc.Callable[[typing.SupportsInt, typing.SupportsInt], int],
+    arg0: collections.abc.Callable[
+        [
+            typing.SupportsInt | typing.SupportsIndex,
+            typing.SupportsInt | typing.SupportsIndex,
+        ],
+        int,
+    ],
 ) -> typing.Any: ...
 def accept_callable(arg0: collections.abc.Callable) -> typing.Any: ...
 def accept_frozenset(arg0: frozenset) -> None: ...
 def accept_py_handle(arg0: typing.Any) -> str: ...
 def accept_py_object(arg0: typing.Any) -> str: ...
 def accept_set(arg0: set) -> None: ...
-def add(arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> int: ...
+def add(
+    arg0: typing.SupportsInt | typing.SupportsIndex,
+    arg1: typing.SupportsInt | typing.SupportsIndex,
+) -> int: ...
 def default_custom_arg(foo: Foo = Foo(5)) -> None: ...
-def default_int_arg(n: typing.SupportsInt = 5) -> None: ...
+def default_int_arg(n: typing.SupportsInt | typing.SupportsIndex = 5) -> None: ...
 def default_list_arg(l: list = [1, 2, 6, 18]) -> None: ...
-def default_optional_arg(n: typing.SupportsInt | None = None) -> None: ...
+def default_optional_arg(
+    n: typing.SupportsInt | typing.SupportsIndex | None = None,
+) -> None: ...
 def func_w_anon_args(
-    arg0: typing.SupportsInt, arg1: typing.SupportsInt, arg2: typing.SupportsInt
+    arg0: typing.SupportsInt | typing.SupportsIndex,
+    arg1: typing.SupportsInt | typing.SupportsIndex,
+    arg2: typing.SupportsInt | typing.SupportsIndex,
 ) -> None: ...
 def func_w_named_pos_args(
-    x: typing.SupportsInt, y: typing.SupportsInt, z: typing.SupportsInt
+    x: typing.SupportsInt | typing.SupportsIndex,
+    y: typing.SupportsInt | typing.SupportsIndex,
+    z: typing.SupportsInt | typing.SupportsIndex,
 ) -> None: ...
 def generic(*args, **kwargs) -> None: ...
 @typing.overload
-def mul(x: typing.SupportsInt, y: typing.SupportsInt) -> int:
+def mul(
+    x: typing.SupportsInt | typing.SupportsIndex,
+    y: typing.SupportsInt | typing.SupportsIndex,
+) -> int:
     """
     Multiply x and y (int)
     """
 
 @typing.overload
-def mul(p: typing.SupportsFloat, q: typing.SupportsFloat) -> float:
+def mul(
+    p: typing.SupportsFloat | typing.SupportsIndex,
+    q: typing.SupportsFloat | typing.SupportsIndex,
+) -> float:
     """
     Multiply p and q (double)
     """
@@ -88,15 +109,19 @@ def passthrough3() -> tuple[None, None]:
 
 def passthrough_backwards(obj: U) -> U: ...
 def pos_kw_only_mix(
-    i: typing.SupportsInt, /, j: typing.SupportsInt, *, k: typing.SupportsInt
-) -> tuple: ...
-def pos_kw_only_variadic_mix(
-    i: typing.SupportsInt,
+    i: typing.SupportsInt | typing.SupportsIndex,
     /,
-    j: typing.SupportsInt,
+    j: typing.SupportsInt | typing.SupportsIndex,
+    *,
+    k: typing.SupportsInt | typing.SupportsIndex,
+) -> tuple[int, int, int]: ...
+def pos_kw_only_variadic_mix(
+    i: typing.SupportsInt | typing.SupportsIndex,
+    /,
+    j: typing.SupportsInt | typing.SupportsIndex,
     *args,
-    k: typing.SupportsInt,
+    k: typing.SupportsInt | typing.SupportsIndex,
     **kwargs,
-) -> tuple: ...
+) -> tuple[int, int, int]: ...
 
 U: typing.TypeVar  # value = ~U
