@@ -101,4 +101,41 @@ void bind_functions_module(py::module &&m) {
     m.def("default_custom_arg", [](Foo &foo) {}, py::arg_v("foo", Foo(5), "Foo(5)"));
     m.def("pass_callback", [](std::function<Foo(Foo &)> &callback) { return Foo(13); });
     m.def("nested_types", [](std::variant<std::list<Foo>, Foo> arg){ return arg; });
+
+    py::options options;
+    options.disable_function_signatures();
+    m.def(
+        "passthrough1",
+        [](py::object obj) { return obj; },
+        py::doc("passthrough1[T](obj: T) -> T\n"));
+    m.def(
+        "passthrough2",
+        [](py::object obj) { return obj; },
+        py::doc(
+            "passthrough2(*args, **kwargs)\n"
+            "Overloaded function.\n"
+            "1. passthrough2() -> None\n"
+            "2. passthrough2[T](obj: T) -> T\n"),
+        py::arg("obj") = py::none());
+    m.def(
+        "passthrough3",
+        [](py::object obj1, py::object obj2) { return py::make_tuple(obj1, obj2); },
+        py::doc(
+            "passthrough3(*args, **kwargs)\n"
+            "Overloaded function.\n"
+            "1. passthrough3() -> tuple[None, None]\n"
+            "2. passthrough3[T](obj: T) -> tuple[T, None]\n"
+            "3. passthrough3[T1, T2](obj1: T1, obj2: T2) -> tuple[T1, T2]\n"),
+        py::arg("obj1") = py::none(),
+        py::arg("obj2") = py::none());
+    m.def(
+        "passthrough_backwards",
+        [](py::object obj) { return obj; },
+#if PY_MAJOR_VERSION > 3 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 12)
+        py::doc("passthrough_backwards[T](obj: T) -> T\n"));
+#else
+        py::doc("passthrough_backwards(obj: U) -> U\n"));
+    m.attr("U") = py::module::import("typing").attr("TypeVar")("U");
+#endif
+    options.enable_function_signatures();
 }
