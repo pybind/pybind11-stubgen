@@ -38,6 +38,30 @@ void bind_classes_module(py::module&&m) {
             .def("g", &demo::Foo::Child::g);
     }
 
+    // Cross-reference / "cyclic" test case (issue #231, PR #275):
+    // Registration order: ParticleContainer, then ParIter, then ParIterBase.
+    // ParticleContainer.Iterator is an alias to ParIter (cross-ref).
+    // ParIter inherits ParIterBase and takes ParticleContainer in __init__.
+    // The topological sort must put ParIterBase before ParIter;
+    // from __future__ import annotations handles the annotation back-refs.
+    {
+        auto pyParIterBase = py::class_<demo::ParIterBase>(m, "ParIterBase");
+        pyParIterBase.def_readwrite("level", &demo::ParIterBase::level);
+
+        auto pyParticleContainer = py::class_<demo::ParticleContainer>(m, "ParticleContainer");
+        pyParticleContainer.def_readwrite("name", &demo::ParticleContainer::name);
+
+        auto pyParIter = py::class_<demo::ParIter, demo::ParIterBase>(m, "ParIter");
+        pyParIter.def(py::init<demo::ParticleContainer&, int>(),
+                      py::arg("particle_container"), py::arg("level"));
+
+        // Bind after ParIter is registered so pybind11 resolves the Python type
+        pyParticleContainer.def("process", &demo::ParticleContainer::process);
+
+        // Alias: ParticleContainer.Iterator = ParIter
+        pyParticleContainer.attr("Iterator") = pyParIter;
+    }
+
     {
         py::register_exception<demo::CppException>(m, "CppException");
     }
