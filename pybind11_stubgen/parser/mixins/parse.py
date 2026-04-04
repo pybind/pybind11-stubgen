@@ -3,8 +3,9 @@ from __future__ import annotations
 import ast
 import inspect
 import re
+import sys
 import types
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from pybind11_stubgen.parser.errors import (
     InvalidExpressionError,
@@ -39,6 +40,8 @@ _generic_args = [
     Argument(name=Identifier("args"), variadic=True),
     Argument(name=Identifier("kwargs"), kw_variadic=True),
 ]
+
+T = TypeVar("T")
 
 
 class ParserDispatchMixin(IParser):
@@ -384,6 +387,9 @@ class BaseParser(IParser):
             )
         )
 
+    def call_with_local_types(self, parameters: list[str], func: Callable[[], T]) -> T:
+        return func()
+
     def parse_value_str(self, value: str) -> Value | InvalidExpression:
         return self._parse_expression_str(value)
 
@@ -624,7 +630,9 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
             return []
 
         top_signature_regex = re.compile(
-            rf"^{func_name}\((?P<args>.*)\)\s*(->\s*(?P<returns>.+))?$"
+            rf"^{func_name}"
+            r"(\[(?P<type_vars>[\w\s,]*)])?"
+            r"\((?P<args>.*)\)\s*(->\s*(?P<returns>.+))?$"
         )
 
         match = top_signature_regex.match(doc_lines[0])
@@ -632,24 +640,43 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
             return []
 
         if len(doc_lines) < 2 or doc_lines[1] != "Overloaded function.":
+            # TODO: Update to support more complex formats.
+            #  This only supports bare type parameters.
+            type_vars_group = match.group("type_vars")
+            if sys.version_info < (3, 12) and type_vars_group:
+                # This syntax is not supported before Python 3.12.
+                return []
+            type_vars: list[str] = list(
+                filter(
+                    bool, map(str.strip, (type_vars_group or "").split(","))
+                )
+            )
+            args = self.call_with_local_types(
+                type_vars, lambda: self.parse_args_str(match.group("args"))
+            )
+
             returns_str = match.group("returns")
             if returns_str is not None:
-                returns = self.parse_annotation_str(returns_str)
+                returns = self.call_with_local_types(
+                    type_vars, lambda: self.parse_annotation_str(returns_str)
+                )
             else:
                 returns = None
 
             return [
                 Function(
                     name=func_name,
-                    args=self.parse_args_str(match.group("args")),
+                    args=args,
                     doc=self._strip_empty_lines(doc_lines[1:]),
                     returns=returns,
+                    type_vars=type_vars,
                 )
             ]
 
         overload_signature_regex = re.compile(
-            rf"^(\s*(?P<overload_number>\d+).\s*)"
-            rf"{func_name}\((?P<args>.*)\)\s*->\s*(?P<returns>.+)$"
+            rf"^(\s*(?P<overload_number>\d+)\.\s*){func_name}"
+            r"(\[(?P<type_vars>[\w\s,]*)])?"
+            r"\((?P<args>.*)\)\s*->\s*(?P<returns>.+)$"
         )
 
         doc_start = 0
@@ -661,18 +688,38 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
             if match:
                 if match.group("overload_number") != f"{len(overloads)}":
                     continue
+                type_vars_group = match.group("type_vars")
+                if sys.version_info < (3, 12) and type_vars_group:
+                    # This syntax is not supported before Python 3.12.
+                    continue
                 overloads[-1].doc = self._strip_empty_lines(doc_lines[doc_start:i])
                 doc_start = i + 1
+                # TODO: Update to support more complex formats.
+                #  This only supports bare type parameters.
+
+                type_vars: list[str] = list(
+                    filter(
+                        bool,
+                        map(str.strip, (type_vars_group or "").split(",")),
+                    )
+                )
+                args = self.call_with_local_types(
+                    type_vars, lambda: self.parse_args_str(match.group("args"))
+                )
+                returns = self.call_with_local_types(
+                    type_vars, lambda: self.parse_annotation_str(match.group("returns"))
+                )
                 overloads.append(
                     Function(
                         name=func_name,
-                        args=self.parse_args_str(match.group("args")),
-                        returns=self.parse_annotation_str(match.group("returns")),
+                        args=args,
+                        returns=returns,
                         doc=None,
                         decorators=[
                             # use `parse_annotation_str()` to trigger typing import
                             Decorator(str(self.parse_annotation_str("typing.overload")))
                         ],
+                        type_vars=type_vars,
                     )
                 )
 

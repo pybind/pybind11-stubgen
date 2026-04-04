@@ -142,6 +142,7 @@ class Function:
     returns: Annotation | None = field_(default=None)
     doc: Docstring | None = field_(default=None)
     decorators: list[Decorator] = field_(default_factory=list)
+    type_vars: list[str] = field_(default_factory=list)
 
     def __str__(self):
         return (

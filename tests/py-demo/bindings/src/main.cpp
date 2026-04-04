@@ -15,4 +15,5 @@ PYBIND11_MODULE(_bindings, m) {
     bind_stl_bind_module(m.def_submodule("stl_bind"));
     bind_typing_module(m.def_submodule("typing"));
     bind_values_module(m.def_submodule("values"));
+    bind_hidden_builtins_module(m.def_submodule("hidden_builtins"));
 }

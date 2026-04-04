@@ -20,3 +20,4 @@ void bind_stl_module(py::module&& m);
 void bind_stl_bind_module(py::module&& m);
 void bind_typing_module(py::module&& m);
 void bind_values_module(py::module&& m);
+void bind_hidden_builtins_module(py::module&& m);

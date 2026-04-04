@@ -24,7 +24,8 @@ def issue_274_docstring_leading_newline() -> None:
     """
 
 def issue_51_catastrophic_regex(
-    arg0: typing.SupportsInt, arg1: typing.SupportsInt
+    arg0: typing.SupportsInt | typing.SupportsIndex,
+    arg1: typing.SupportsInt | typing.SupportsIndex,
 ) -> None:
     """
     Use-case:

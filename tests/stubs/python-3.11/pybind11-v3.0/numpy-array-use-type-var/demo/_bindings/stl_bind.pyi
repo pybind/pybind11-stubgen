@@ -30,7 +30,11 @@ class MapStringComplex:
         Return the canonical string representation of this map.
         """
 
-    def __setitem__(self, arg0: str, arg1: complex) -> None: ...
+    def __setitem__(
+        self,
+        arg0: str,
+        arg1: typing.SupportsComplex | typing.SupportsFloat | typing.SupportsIndex,
+    ) -> None: ...
     def items(self) -> typing.ItemsView: ...
     def keys(self) -> typing.KeysView: ...
     def values(self) -> typing.ValuesView: ...
@@ -42,13 +46,15 @@ class VectorPairStringDouble:
         Check whether the list is nonempty
         """
 
-    def __contains__(self, x: tuple[str, typing.SupportsFloat]) -> bool:
+    def __contains__(
+        self, x: tuple[str, typing.SupportsFloat | typing.SupportsIndex]
+    ) -> bool:
         """
         Return true the container contains ``x``
         """
 
     @typing.overload
-    def __delitem__(self, arg0: typing.SupportsInt) -> None:
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Delete the list elements at index ``i``
         """
@@ -67,7 +73,9 @@ class VectorPairStringDouble:
         """
 
     @typing.overload
-    def __getitem__(self, arg0: typing.SupportsInt) -> tuple[str, float]: ...
+    def __getitem__(
+        self, arg0: typing.SupportsInt | typing.SupportsIndex
+    ) -> tuple[str, float]: ...
     @typing.overload
     def __init__(self) -> None: ...
     @typing.overload
@@ -83,7 +91,9 @@ class VectorPairStringDouble:
     def __ne__(self, arg0: VectorPairStringDouble) -> bool: ...
     @typing.overload
     def __setitem__(
-        self, arg0: typing.SupportsInt, arg1: tuple[str, typing.SupportsFloat]
+        self,
+        arg0: typing.SupportsInt | typing.SupportsIndex,
+        arg1: tuple[str, typing.SupportsFloat | typing.SupportsIndex],
     ) -> None: ...
     @typing.overload
     def __setitem__(self, arg0: slice, arg1: VectorPairStringDouble) -> None:
@@ -91,7 +101,9 @@ class VectorPairStringDouble:
         Assign list elements using a slice object
         """
 
-    def append(self, x: tuple[str, typing.SupportsFloat]) -> None:
+    def append(
+        self, x: tuple[str, typing.SupportsFloat | typing.SupportsIndex]
+    ) -> None:
         """
         Add an item to the end of the list
         """
@@ -101,7 +113,7 @@ class VectorPairStringDouble:
         Clear the contents
         """
 
-    def count(self, x: tuple[str, typing.SupportsFloat]) -> int:
+    def count(self, x: tuple[str, typing.SupportsFloat | typing.SupportsIndex]) -> int:
         """
         Return the number of times ``x`` appears in the list
         """
@@ -119,7 +131,9 @@ class VectorPairStringDouble:
         """
 
     def insert(
-        self, i: typing.SupportsInt, x: tuple[str, typing.SupportsFloat]
+        self,
+        i: typing.SupportsInt | typing.SupportsIndex,
+        x: tuple[str, typing.SupportsFloat | typing.SupportsIndex],
     ) -> None:
         """
         Insert an item at a given position.
@@ -132,12 +146,14 @@ class VectorPairStringDouble:
         """
 
     @typing.overload
-    def pop(self, i: typing.SupportsInt) -> tuple[str, float]:
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> tuple[str, float]:
         """
         Remove and return the item at index ``i``
         """
 
-    def remove(self, x: tuple[str, typing.SupportsFloat]) -> None:
+    def remove(
+        self, x: tuple[str, typing.SupportsFloat | typing.SupportsIndex]
+    ) -> None:
         """
         Remove the first item from the list whose value is x. It is an error if there is no such item.
         """
