@@ -66,8 +66,8 @@ run_stubgen() {
 format_stubs() {
   (
     cd "${STUBS_DIR}" ;
-    uv run ruff format ./pybind11_stubgen
-    uv run ruff check --select I,RUF022 --fix . --diff
+    uv run ruff format .
+    uv run ruff check --select I,RUF022 --fix .
   )
 }
 

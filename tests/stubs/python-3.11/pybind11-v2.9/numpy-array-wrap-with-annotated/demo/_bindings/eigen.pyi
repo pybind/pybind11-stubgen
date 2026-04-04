@@ -3,8 +3,9 @@ from __future__ import annotations
 import typing
 
 import numpy
-import pybind11_stubgen.typing_ext
 import scipy.sparse
+
+import pybind11_stubgen.typing_ext
 
 __all__: list[str] = [
     "accept_matrix_int",
