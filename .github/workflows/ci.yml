@@ -186,7 +186,7 @@ jobs:
         run: uv pip install pytest-github-actions-annotate-failures
 
       - name: Install requirements
-        run: uv pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt" --system
+        run: uv pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
 
       - name: Install
         shell: bash
@@ -195,11 +195,15 @@ jobs:
 
       - name: Install demo module
         shell: bash
-        run: ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.config.pybind11-branch }}"
+        run: |
+          source .venv/bin/activate
+          ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.config.pybind11-branch }}"
 
       - name: Check stubs generation
         shell: bash
-        run: ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}" --${{ matrix.config.numpy-format }}
+        run: |
+          source .venv/bin/activate
+          ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}" --${{ matrix.config.numpy-format }}
 
       - name: Archive patch
         uses: actions/upload-artifact@v6
@@ -212,7 +216,9 @@ jobs:
 
       - name: Check error generation
         shell: bash
-        run: ./tests/check-demo-errors-generation.sh "pybind11-${{ matrix.config.pybind11-branch }}"
+        run: |
+          source .venv/bin/activate
+          ./tests/check-demo-errors-generation.sh "pybind11-${{ matrix.config.pybind11-branch }}"
 
   test-cli-options:
     name: "Runs on 🐍 ${{ matrix.python }} • ${{ matrix.test-package }}"

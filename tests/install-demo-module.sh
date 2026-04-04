@@ -85,7 +85,7 @@ install_pydemo() {
   (
     export CMAKE_PREFIX_PATH="$(resolve_path "${INSTALL_PREFIX}"):$(cmeel cmake)";
     rm -rf ${TESTS_ROOT}/py-demo/build
-    uv pip install --force-reinstall "${TESTS_ROOT}/py-demo"
+    pip install --force-reinstall "${TESTS_ROOT}/py-demo"
   )
 }
 

@@ -53,7 +53,7 @@ remove_stubs() {
 }
 
 run_stubgen() {
-  uv run pybind11-stubgen \
+  pybind11-stubgen \
       demo \
       --output-dir=${STUBS_DIR} \
       ${NUMPY_FORMAT} \
@@ -66,8 +66,9 @@ run_stubgen() {
 format_stubs() {
   (
     cd "${STUBS_DIR}" ;
-    uv run ruff format .
-    uv run ruff check --select I,RUF022 --fix .
+    PYTHON_TARGET=$(python -c "import sys; print(f'py{sys.version_info.major}{sys.version_info.minor}')")
+    ruff format --target-version "${PYTHON_TARGET}" .
+    ruff check --select I,RUF022 --fix --target-version "${PYTHON_TARGET}" .
   )
 }
 

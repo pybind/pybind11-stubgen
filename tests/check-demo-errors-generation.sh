@@ -39,7 +39,7 @@ check_error_messages() {
 run_stubgen() {
   (
     set +e ;
-    uv run pybind11-stubgen \
+    pybind11-stubgen \
       demo \
       --output-dir=${STUBS_DIR} \
       --exit-code \

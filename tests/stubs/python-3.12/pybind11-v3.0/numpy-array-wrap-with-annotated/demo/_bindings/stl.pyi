@@ -20,15 +20,13 @@ def std_array(
 def std_map() -> dict[int, complex]: ...
 def std_optional(arg0: typing.SupportsInt | typing.SupportsIndex | None) -> None: ...
 def std_variant(
-    arg0: (
-        typing.SupportsInt
-        | typing.SupportsIndex
-        | typing.SupportsFloat
-        | typing.SupportsIndex
-        | tuple[
-            typing.SupportsInt | typing.SupportsIndex,
-            typing.SupportsInt | typing.SupportsIndex,
-        ]
-    ),
+    arg0: typing.SupportsInt
+    | typing.SupportsIndex
+    | typing.SupportsFloat
+    | typing.SupportsIndex
+    | tuple[
+        typing.SupportsInt | typing.SupportsIndex,
+        typing.SupportsInt | typing.SupportsIndex,
+    ],
 ) -> None: ...
 def std_vector() -> list[tuple[int, float]]: ...
