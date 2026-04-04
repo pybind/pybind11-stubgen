@@ -21,13 +21,11 @@ class WithGetterSetterDoc:
         """
         getter doc token
         """
-
     @def_property.setter
     def def_property(self, arg1: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         setter doc token
         """
-
     @property
     def def_property_readonly(self) -> int:
         """
@@ -46,7 +44,6 @@ class WithPropAndGetterSetterDoc:
         """
         prop doc token
         """
-
     @def_property.setter
     def def_property(self, arg1: typing.SupportsInt | typing.SupportsIndex) -> None: ...
     @property
@@ -67,7 +64,6 @@ class WithPropDoc:
         """
         prop doc token
         """
-
     @def_property.setter
     def def_property(self, arg1: typing.SupportsInt | typing.SupportsIndex) -> None: ...
     @property
@@ -75,19 +71,16 @@ class WithPropDoc:
         """
         prop doc token
         """
-
     @property
     def def_readonly(self) -> int:
         """
         prop doc token
         """
-
     @property
     def def_readwrite(self) -> int:
         """
         prop doc token
         """
-
     @def_readwrite.setter
     def def_readwrite(
         self, arg0: typing.SupportsInt | typing.SupportsIndex
