@@ -647,9 +647,7 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
                 # This syntax is not supported before Python 3.12.
                 return []
             type_vars: list[str] = list(
-                filter(
-                    bool, map(str.strip, (type_vars_group or "").split(","))
-                )
+                filter(bool, map(str.strip, (type_vars_group or "").split(",")))
             )
             args = self.call_with_local_types(
                 type_vars, lambda: self.parse_args_str(match.group("args"))
