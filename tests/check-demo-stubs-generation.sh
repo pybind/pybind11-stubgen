@@ -53,7 +53,7 @@ remove_stubs() {
 }
 
 run_stubgen() {
-  uv run pybind11_stubgen \
+  uv run pybind11-stubgen \
       demo \
       --output-dir=${STUBS_DIR} \
       ${NUMPY_FORMAT} \
