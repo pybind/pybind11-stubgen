@@ -6,6 +6,7 @@ import re
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
 from pathlib import Path
+import sys
 
 from pybind11_stubgen.parser.interface import IParser
 from pybind11_stubgen.parser.mixins.error_handlers import (
@@ -350,6 +351,7 @@ def run(
     dry_run: bool,
     writer: Writer,
 ):
+    sys.path.insert(0, str(Path.cwd().resolve()))
     modules = []
     for module_name in module_names:
         module = parser.handle_module(
