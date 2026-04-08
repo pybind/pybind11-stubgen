@@ -39,7 +39,8 @@ void bind_classes_module(py::module&&m) {
     }
 
     // Cross-reference / "cyclic" test case (issue #231, PR #275):
-    // Registration order: ParticleContainer, then ParIter, then ParIterBase.
+    // Binding registration order here is ParIterBase, then ParticleContainer,
+    // then ParIter.
     // ParticleContainer.Iterator is an alias to ParIter (cross-ref).
     // ParIter inherits ParIterBase and takes ParticleContainer in __init__.
     // The topological sort must put ParIterBase before ParIter;
