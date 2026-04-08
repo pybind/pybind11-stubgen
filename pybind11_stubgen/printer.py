@@ -32,11 +32,32 @@ def indent_lines(lines: list[str], by=4) -> list[str]:
     return [" " * by + line for line in lines]
 
 
+def _referenced_local_class_name(expr: str) -> str | None:
+    """Extract the local class name from a dotted identifier expression.
+
+    Returns the last component if *expr* is a valid dotted identifier
+    (e.g. ``"ParIter"`` -> ``"ParIter"``, ``"Outer.Inner"`` -> ``"Inner"``),
+    or ``None`` for anything else (literals, calls, etc.).
+    """
+    parts = expr.split(".")
+    if not parts or any(not part.isidentifier() for part in parts):
+        return None
+    return parts[-1]
+
+
 def _topological_sort_classes(classes: list[Class]) -> list[Class]:
-    """Sort classes so that base classes appear before derived classes.
+    """Sort classes so that dependencies appear before dependents.
+
+    Considers two kinds of edges:
+    - Inheritance: base classes must appear before derived classes.
+    - Runtime references: class-body aliases (``Foo = Bar``) and field
+      values that name a sibling class are executable at import time,
+      so the referenced class must already be defined.
+      (``from __future__ import annotations`` only defers *type annotations*,
+      not attribute/alias assignments.)
 
     Uses Kahn's algorithm. Ties are broken by input position for stability.
-    External bases (not in the current scope) are ignored.
+    External references (not in the current scope) are ignored.
     """
     if not classes:
         return classes
@@ -44,17 +65,45 @@ def _topological_sort_classes(classes: list[Class]) -> list[Class]:
     name_to_index = {c.name: i for i, c in enumerate(classes)}
     name_to_class = {c.name: c for c in classes}
 
-    # Build adjacency list: base -> [derived, ...]
+    # Build adjacency list: dependency -> [dependent, ...]
     # and in-degree count for each class
     children: dict[str, list[str]] = {c.name: [] for c in classes}
     in_degree: dict[str, int] = {c.name: 0 for c in classes}
+    seen_edges: set[tuple[str, str]] = set()
+
+    def _add_edge(dependency: str, dependent: str) -> None:
+        edge = (dependency, dependent)
+        if edge in seen_edges:
+            return
+        seen_edges.add(edge)
+        children[dependency].append(dependent)
+        in_degree[dependent] += 1
 
     for c in classes:
+        # Inheritance edges: base -> derived
         for base in c.bases:
             base_name = str(base[-1])
             if base_name in name_to_class:
-                children[base_name].append(c.name)
-                in_degree[c.name] += 1
+                _add_edge(base_name, c.name)
+
+        # Alias edges: ``Iterator = ParIter`` is a runtime assignment
+        for alias in c.aliases:
+            origin_name = str(alias.origin[-1])
+            if origin_name in name_to_class and origin_name != c.name:
+                _add_edge(origin_name, c.name)
+
+        # Field-value edges: a print-safe field like ``Iterator = ParIter``
+        # (parsed as a Field rather than an Alias in some configurations)
+        for field in c.fields:
+            val = field.attribute.value
+            if val is not None and val.is_print_safe:
+                val_name = _referenced_local_class_name(val.repr)
+                if (
+                    val_name is not None
+                    and val_name in name_to_class
+                    and val_name != c.name
+                ):
+                    _add_edge(val_name, c.name)
 
     # Initialize queue with zero in-degree classes, sorted by input position
     queue = sorted(
@@ -77,7 +126,7 @@ def _topological_sort_classes(classes: list[Class]) -> list[Class]:
     if len(result) < len(classes):
         remaining = [c for c in classes if c.name not in {r.name for r in result}]
         log.warning(
-            "Cycle detected in class inheritance involving: %s. "
+            "Cycle detected in class dependencies involving: %s. "
             "Appending in original order.",
             [c.name for c in remaining],
         )
@@ -92,10 +141,7 @@ class Printer:
         self.sort_by = sort_by
 
     def _order_classes(self, classes: list[Class]) -> list[Class]:
-        if self.sort_by == "definition":
-            return classes
-        else:  # "topological"
-            return _topological_sort_classes(classes)
+        return _topological_sort_classes(classes)
 
     def print_alias(self, alias: Alias) -> list[str]:
         return [f"{alias.name} = {alias.origin}"]
