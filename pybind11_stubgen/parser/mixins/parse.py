@@ -48,7 +48,7 @@ class ParserDispatchMixin(IParser):
     def handle_class(self, path: QualifiedName, class_: type) -> Class | None:
         base_classes = class_.__bases__
         result = Class(name=path[-1], bases=self.handle_bases(path, base_classes))
-        for name, member in inspect.getmembers(class_):
+        for name, member in self._iter_class_members(class_):
             obj = self.handle_class_member(
                 QualifiedName([*path, Identifier(name)]), class_, member
             )
@@ -69,6 +69,30 @@ class ParserDispatchMixin(IParser):
             else:
                 raise AssertionError()
         return result
+
+    def _iter_class_members(self, class_: type):
+        seen: set[str] = set()
+
+        # Iterate __dict__ keys for definition order, but resolve values
+        # through getattr() so descriptors (staticmethod, properties, etc.)
+        # are properly unwrapped — matching inspect.getmembers() semantics.
+        for name in class_.__dict__:
+            seen.add(name)
+            try:
+                value = getattr(class_, name)
+            except AttributeError:
+                continue
+            yield name, value
+
+        # Append inherited or lazily exposed members from dir().
+        for name in dir(class_):
+            if name in seen:
+                continue
+            try:
+                value = getattr(class_, name)
+            except AttributeError:
+                continue
+            yield name, value
 
     def handle_class_member(
         self, path: QualifiedName, class_: type, member: Any
