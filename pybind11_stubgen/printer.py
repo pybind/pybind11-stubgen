@@ -136,9 +136,8 @@ def _topological_sort_classes(classes: list[Class]) -> list[Class]:
 
 
 class Printer:
-    def __init__(self, invalid_expr_as_ellipses: bool, sort_by: Literal["definition", "topological"] = "definition"):
+    def __init__(self, invalid_expr_as_ellipses: bool):
         self.invalid_expr_as_ellipses = invalid_expr_as_ellipses
-        self.sort_by = sort_by
 
     def _order_classes(self, classes: list[Class]) -> list[Class]:
         return _topological_sort_classes(classes)
