@@ -68,13 +68,13 @@ class Foo:
 class ParIterBase:
     level: int
 
+class ParIter(ParIterBase):
+    def __init__(self, particle_container: ParticleContainer, level: int) -> None: ...
+
 class ParticleContainer:
     name: str
     Iterator = ParIter
     def process(self, arg0: ParIter) -> None: ...
-
-class ParIter(ParIterBase):
-    def __init__(self, particle_container: ParticleContainer, level: int) -> None: ...
 
 class CppException(Exception):
     pass

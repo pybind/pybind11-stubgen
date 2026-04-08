@@ -78,17 +78,17 @@ class ParIterBase:
     @level.setter
     def level(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None: ...
 
-class ParticleContainer:
-    name: str
-    Iterator = ParIter
-    def process(self, arg0: ParIter) -> None: ...
-
 class ParIter(ParIterBase):
     def __init__(
         self,
         particle_container: ParticleContainer,
         level: typing.SupportsInt | typing.SupportsIndex,
     ) -> None: ...
+
+class ParticleContainer:
+    name: str
+    Iterator = ParIter
+    def process(self, arg0: ParIter) -> None: ...
 
 class CppException(Exception):
     pass
