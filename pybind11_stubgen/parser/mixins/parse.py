@@ -89,7 +89,7 @@ class ParserDispatchMixin(IParser):
         self, path: QualifiedName, module: types.ModuleType
     ) -> Module | None:
         result = Module(name=path[-1])
-        for name, member in module.__dict__.items():
+        for name, member in self._iter_module_members(module):
             obj = self.handle_module_member(
                 QualifiedName([*path, Identifier(name)]), module, member
             )
@@ -116,6 +116,24 @@ class ParserDispatchMixin(IParser):
                 raise AssertionError()
 
         return result
+
+    def _iter_module_members(self, module: types.ModuleType):
+        seen: set[str] = set()
+
+        # Preserve definition order for regular module globals, which reflects
+        # pybind11 registration order, and then append lazily exposed members.
+        for name, member in module.__dict__.items():
+            seen.add(name)
+            yield name, member
+
+        for name in dir(module):
+            if name in seen:
+                continue
+            try:
+                member = getattr(module, name)
+            except AttributeError:
+                continue
+            yield name, member
 
     def handle_module_member(
         self, path: QualifiedName, module: types.ModuleType, member: Any

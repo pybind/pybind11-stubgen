@@ -32,17 +32,17 @@ def indent_lines(lines: list[str], by=4) -> list[str]:
     return [" " * by + line for line in lines]
 
 
-def _referenced_local_class_name(expr: str) -> str | None:
-    """Extract the local class name from a dotted identifier expression.
+def _referenced_local_dependency_name(expr: str) -> str | None:
+    """Extract the local dependency name from a dotted identifier expression.
 
-    Returns the last component if *expr* is a valid dotted identifier
-    (e.g. ``"ParIter"`` -> ``"ParIter"``, ``"Outer.Inner"`` -> ``"Inner"``),
+    Returns the first component if *expr* is a valid dotted identifier
+    (e.g. ``"ParIter"`` -> ``"ParIter"``, ``"Outer.Inner"`` -> ``"Outer"``),
     or ``None`` for anything else (literals, calls, etc.).
     """
     parts = expr.split(".")
     if not parts or any(not part.isidentifier() for part in parts):
         return None
-    return parts[-1]
+    return parts[0]
 
 
 def _topological_sort_classes(classes: list[Class]) -> list[Class]:
@@ -57,7 +57,8 @@ def _topological_sort_classes(classes: list[Class]) -> list[Class]:
       not attribute/alias assignments.)
 
     Uses Kahn's algorithm. Ties are broken by input position for stability.
-    External references (not in the current scope) are ignored.
+    Only references whose first identifier component names a sibling class in
+    the current scope contribute edges. External references are ignored.
     """
     if not classes:
         return classes
@@ -82,13 +83,13 @@ def _topological_sort_classes(classes: list[Class]) -> list[Class]:
     for c in classes:
         # Inheritance edges: base -> derived
         for base in c.bases:
-            base_name = str(base[-1])
+            base_name = str(base[0])
             if base_name in name_to_class:
                 _add_edge(base_name, c.name)
 
         # Alias edges: ``Iterator = ParIter`` is a runtime assignment
         for alias in c.aliases:
-            origin_name = str(alias.origin[-1])
+            origin_name = str(alias.origin[0])
             if origin_name in name_to_class and origin_name != c.name:
                 _add_edge(origin_name, c.name)
 
@@ -97,7 +98,7 @@ def _topological_sort_classes(classes: list[Class]) -> list[Class]:
         for field in c.fields:
             val = field.attribute.value
             if val is not None and val.is_print_safe:
-                val_name = _referenced_local_class_name(val.repr)
+                val_name = _referenced_local_dependency_name(val.repr)
                 if (
                     val_name is not None
                     and val_name in name_to_class
