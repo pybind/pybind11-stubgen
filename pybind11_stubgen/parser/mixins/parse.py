@@ -5,6 +5,7 @@ import inspect
 import re
 import sys
 import types
+import typing
 from typing import Any, Callable, TypeVar
 
 from pybind11_stubgen.parser.errors import (
@@ -296,12 +297,12 @@ class BaseParser(IParser):
                     func_args[arg_name].annotation = self.parse_annotation_str(
                         annotation
                     )
-                elif not isinstance(annotation, type):
-                    func_args[arg_name].annotation = self.handle_value(annotation)
                 elif self._is_generic_alias(annotation):
                     func_args[arg_name].annotation = self.parse_annotation_str(
                         str(annotation)
                     )
+                elif not isinstance(annotation, type):
+                    func_args[arg_name].annotation = self.handle_value(annotation)
                 else:
                     func_args[arg_name].annotation = ResolvedType(
                         name=self.handle_type(annotation),
@@ -335,9 +336,11 @@ class BaseParser(IParser):
 
     def _is_generic_alias(self, annotation: type) -> bool:
         generic_alias_t: type | None = getattr(types, "GenericAlias", None)
-        if generic_alias_t is None:
-            return False
-        return isinstance(annotation, generic_alias_t)
+        return (
+            generic_alias_t is not None
+            and isinstance(annotation, generic_alias_t)
+            or typing.get_origin(annotation) is not None
+        )
 
     def handle_import(self, path: QualifiedName, origin: Any) -> Import | None:
         full_name = self._get_full_name(path, origin)

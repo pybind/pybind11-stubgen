@@ -487,8 +487,8 @@ class FixCurrentModulePrefixInTypeNames(IParser):
         result = super().handle_attribute(path, attr)
         if result is None:
             return None
-        if isinstance(result.annotation, ResolvedType):
-            result.annotation.name = self._strip_current_module(result.annotation.name)
+        if result.annotation is not None:
+            result.annotation = self._strip_current_module_prefix(result.annotation)
         return result
 
     def handle_module(
@@ -516,9 +516,31 @@ class FixCurrentModulePrefixInTypeNames(IParser):
         self, annotation_str: str
     ) -> ResolvedType | InvalidExpression | Value:
         result = super().parse_annotation_str(annotation_str)
-        if isinstance(result, ResolvedType):
-            result.name = self._strip_current_module(result.name)
-        return result
+        return self._strip_current_module_prefix(result)
+
+    def _strip_current_module_prefix(
+        self, annotation: ResolvedType | InvalidExpression | Value
+    ) -> ResolvedType | InvalidExpression | Value:
+        """
+        Strip the current module prefix from all resolved type names in an
+        annotation tree.
+
+        Python may evaluate local annotations such as ``list[Token]`` into
+        runtime generics like ``list[impactx.MADXParser.Token]``. The outer
+        container type (``list`` / ``typing.Optional`` / ``dict``) is valid,
+        but nested parameters that point back into the current module should be
+        rendered as local names in the generated stub.
+        """
+        if not isinstance(annotation, ResolvedType):
+            return annotation
+
+        annotation.name = self._strip_current_module(annotation.name)
+        if annotation.parameters is not None:
+            annotation.parameters = [
+                self._strip_current_module_prefix(parameter)
+                for parameter in annotation.parameters
+            ]
+        return annotation
 
     def _strip_current_module(self, name: QualifiedName) -> QualifiedName:
         if name[: len(self.__current_module)] == self.__current_module:
