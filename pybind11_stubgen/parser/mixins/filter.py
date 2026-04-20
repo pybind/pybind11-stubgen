@@ -148,3 +148,35 @@ class FilterPybind11ViewClasses(IParser):
             return None
 
         return result
+
+
+class FilterPybind11NativeEnumMembers(IParser):
+    @staticmethod
+    def _is_sunder(name: str) -> bool:
+        """Match CPython Enum's reserved ``_sunder_`` names.
+
+        Keep this in sync with CPython's ``enum._is_sunder``:
+        https://github.com/python/cpython/blob/3.14/Lib/enum.py#L57-L66
+
+        These names are rejected by ``EnumDict.__setitem__`` unless explicitly
+        allowlisted by ``enum`` itself:
+        https://github.com/python/cpython/blob/3.14/Lib/enum.py#L342-L367
+        """
+        return (
+            len(name) > 2
+            and name[0] == name[-1] == "_"
+            and name[1] != "_"
+            and name[-2] != "_"
+        )
+
+    def handle_class_member(
+        self, path: QualifiedName, class_: type, obj: Any
+    ) -> Docstring | Alias | Class | list[Method] | Field | Property | None:
+        name = str(path[-1])
+        # py::native_enum exposes Enum internals via __dict__, but emitting them
+        # into a stub that later gets executed as Python can fail at import time.
+        if hasattr(class_, "__pybind11_native_enum__") and (
+            name == "__pybind11_native_enum__" or self._is_sunder(name)
+        ):
+            return None
+        return super().handle_class_member(path, class_, obj)
