@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import typing
 
 __all__: list[str] = [
@@ -7,6 +8,7 @@ __all__: list[str] = [
     "ConsoleForegroundColor",
     "Green",
     "Magenta",
+    "NativeColor",
     "None_",
     "Yellow",
     "accept_defaulted_enum",
@@ -61,6 +63,13 @@ class ConsoleForegroundColor:
     def name(self) -> str: ...
     @property
     def value(self) -> int: ...
+
+class NativeColor(enum.IntEnum):
+    Blue: typing.ClassVar[NativeColor]  # value = <NativeColor.Blue: 2>
+    Red: typing.ClassVar[NativeColor]  # value = <NativeColor.Red: 1>
+    @classmethod
+    def __new__(cls, value): ...
+    def __format__(self, format_spec): ...
 
 def accept_defaulted_enum(
     color: ConsoleForegroundColor = ConsoleForegroundColor.None_,

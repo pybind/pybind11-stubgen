@@ -65,14 +65,14 @@ class ConsoleForegroundColor:
     def value(self) -> int: ...
 
 class NativeColor(enum.IntEnum):
+    """
+    An enumeration.
+    """
+
     Blue: typing.ClassVar[NativeColor]  # value = <NativeColor.Blue: 2>
     Red: typing.ClassVar[NativeColor]  # value = <NativeColor.Red: 1>
     @classmethod
     def __new__(cls, value): ...
-    def __format__(self, format_spec):
-        """
-        Convert to a string according to format_spec.
-        """
 
 def accept_defaulted_enum(
     color: ConsoleForegroundColor = ConsoleForegroundColor.None_,
