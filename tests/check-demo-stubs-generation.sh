@@ -52,6 +52,20 @@ remove_stubs() {
     rm -rf "${STUBS_DIR}/*" ;
 }
 
+get_ruff_version() {
+  awk '
+    $1 == "-" && $2 == "repo:" && $3 == "https://github.com/astral-sh/ruff-pre-commit" {
+      found = 1
+      next
+    }
+    found && $1 == "rev:" {
+      sub(/^v/, "", $2)
+      print $2
+      exit
+    }
+  ' "${TESTS_ROOT}/../.pre-commit-config.yaml"
+}
+
 run_stubgen() {
   pybind11-stubgen \
       demo \
@@ -68,8 +82,13 @@ format_stubs() {
   (
     cd "${STUBS_DIR}" ;
     PYTHON_TARGET=$(python -c "import sys; print(f'py{sys.version_info.major}{sys.version_info.minor}')")
-    ruff format --target-version "${PYTHON_TARGET}" .
-    ruff check --select I,RUF022 --fix --target-version "${PYTHON_TARGET}" .
+    RUFF_VERSION=$(get_ruff_version)
+    if [ -z "${RUFF_VERSION}" ]; then
+      echo "Failed to resolve Ruff version from .pre-commit-config.yaml"
+      exit 1
+    fi
+    uvx --from "ruff==${RUFF_VERSION}" ruff format --target-version "${PYTHON_TARGET}" .
+    uvx --from "ruff==${RUFF_VERSION}" ruff check --select I,RUF022 --fix --target-version "${PYTHON_TARGET}" .
   )
 }
 
