@@ -526,7 +526,7 @@ class FixCurrentModulePrefixInTypeNames(IParser):
         annotation tree.
 
         Python may evaluate local annotations such as ``list[Token]`` into
-        runtime generics like ``list[impactx.MADXParser.Token]``. The outer
+        runtime generics like ``list[mymodule.MyClass.Token]``. The outer
         container type (``list`` / ``typing.Optional`` / ``dict``) is valid,
         but nested parameters that point back into the current module should be
         rendered as local names in the generated stub.
