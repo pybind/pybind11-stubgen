@@ -47,6 +47,11 @@ During development, you may need to update the reference stubs in tests/stubs. T
 ```shell
 uv python install 3.10 3.11 3.12 3.13
 ```
+To enable the repository hooks locally:
+```shell
+uv sync
+uv run pre-commit install
+```
 To regenerate the reference stubs run:
 ```shell
 uv venv

@@ -24,6 +24,7 @@ dev = [
     "cmeel-eigen==3.4.0.2",
     "numpy~=1.20",
     "pip",
+    "pre-commit>=4,<5",
     "scipy~=1.0",
     "typing_extensions>=4,<5",
     "mypy>=1.19.1",

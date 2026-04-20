@@ -1,37 +1,22 @@
+ci:
+  autoupdate_schedule: quarterly
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v4.3.0"
+    rev: "v6.0.0"
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: no-commit-to-branch
 
-  - repo: local
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.11
     hooks:
-      - id: black
-        name: black
-        entry: black
-        language: python
-        minimum_pre_commit_version: 2.9.2
-        require_serial: true
+      - id: ruff-check
+        args:
+          - --fix
+          - --ignore=F401,F821
         types_or: [ python, pyi ]
-      - id: isort
-        name: isort
-        entry: isort
-        args:
-          - --profile=black
-        language: system
-        types: [ python ]
-        stages: [ commit ]
-      - id: flake8
-        name: flake8
-        exclude: ^(tests)/
-        language: system
-        entry: flake8
-        args:
-          # The line length in black
-          - --max-line-length=88
-          - --extend-ignore=E203
-        types: [ python ]
-        stages: [ commit ]
+      - id: ruff-format
+        types_or: [ python, pyi ]

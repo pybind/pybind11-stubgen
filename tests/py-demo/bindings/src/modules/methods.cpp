@@ -10,7 +10,7 @@ struct Dummy {
 
 void bind_methods_module(py::module&& m) {
     using namespace methods_detail;
-    
+
     auto &&pyDummy = py::class_<Dummy>(m, "Dummy");
 
     pyDummy.def_static("static_method", &Dummy::static_method);
