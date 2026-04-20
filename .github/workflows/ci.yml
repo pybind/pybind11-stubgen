@@ -14,27 +14,19 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
       - name: Setup Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v7
-      - name: Checkout
-        uses: actions/checkout@v5
       - name: Install requirements
         run: |
           uv lock --check
           uv sync
-      - name: Run Ruff as isort
-        run: uv run ruff check --select I,RUF022 --fix --diff ./pybind11_stubgen
-        if: ${{ failure() ||  success() }}
-      - name: Run Ruff format
-        run: uv run ruff format --diff ./pybind11_stubgen
-        if: ${{ failure() ||  success() }}
-      - name: Run Ruff
-        run: |
-          uv run ruff check --ignore F401,F821 .
-        if: ${{ failure() ||  success() }}
+      - name: Run pre-commit
+        run: uv run pre-commit run --all-files
 
   build:
     name: Build wheel
