@@ -2,7 +2,19 @@ from __future__ import annotations
 
 import typing as typing
 
-__all__: list[str] = ["args_mix", "typing"]
+__all__: list[str] = [
+    "Expression",
+    "Token",
+    "args_mix",
+    "nested_current_module_annotations",
+    "typing",
+]
+
+class Token:
+    pass
+
+class Expression:
+    pass
 
 def args_mix(
     a: int,
@@ -11,5 +23,8 @@ def args_mix(
     *args: int,
     x: int = 1,
     y=int,
-    **kwargs: typing.Dict[int, str],
+    **kwargs: dict[int, str],
 ): ...
+def nested_current_module_annotations(
+    tokens: list[Token], expr: Expression | None = None
+) -> dict[str, Expression]: ...

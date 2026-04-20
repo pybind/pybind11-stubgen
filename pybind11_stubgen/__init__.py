@@ -21,6 +21,7 @@ from pybind11_stubgen.parser.mixins.error_handlers import (
 from pybind11_stubgen.parser.mixins.filter import (
     FilterClassMembers,
     FilterInvalidIdentifiers,
+    FilterPybind11NativeEnumMembers,
     FilterPybind11ViewClasses,
     FilterPybindInternals,
     FilterTypingModuleAttributes,
@@ -74,6 +75,7 @@ class CLIArgs(Namespace):
     numpy_array_remove_parameters: bool
     print_invalid_expressions_as_is: bool
     print_safe_value_reprs: re.Pattern | None
+    print_value_comments: bool
     exit_code: bool
     dry_run: bool
     stub_extension: str
@@ -191,6 +193,13 @@ def arg_parser() -> ArgumentParser:
         type=regex,
         help="Override the print-safe check for values matching REGEX",
     )
+    parser.add_argument(
+        "--print-value-comments",
+        default=False,
+        action="store_true",
+        help="Print attribute values as comments for debugging, "
+        "i.e., '...  # value = <value>'",
+    )
 
     parser.add_argument(
         "--exit-code",
@@ -276,6 +285,7 @@ def stub_parser_from_args(args: CLIArgs) -> IParser:
         FixValueReprRandomAddress,
         FixRedundantBuiltinsAnnotation,
         FilterPybindInternals,
+        FilterPybind11NativeEnumMembers,
         FilterPybind11ViewClasses,
         FixRedundantMethodsFromBuiltinObject,
         RemoveSelfAnnotation,
@@ -310,7 +320,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = arg_parser().parse_args(argv, namespace=CLIArgs())
 
     parser = stub_parser_from_args(args)
-    printer = Printer(invalid_expr_as_ellipses=not args.print_invalid_expressions_as_is)
+    printer = Printer(
+        invalid_expr_as_ellipses=not args.print_invalid_expressions_as_is,
+        print_value_comments=args.print_value_comments,
+    )
 
     run(
         parser,

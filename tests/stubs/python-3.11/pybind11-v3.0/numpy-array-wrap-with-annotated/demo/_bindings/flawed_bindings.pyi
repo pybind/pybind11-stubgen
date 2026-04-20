@@ -12,10 +12,10 @@ __all__: list[str] = [
     "get_unbound_type",
 ]
 
-class Enum:
+class Unbound:
     pass
 
-class Unbound:
+class Enum:
     pass
 
 def accept_unbound_enum(arg0: ...) -> int: ...

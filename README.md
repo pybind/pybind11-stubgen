@@ -33,6 +33,7 @@ pybind11-stubgen [-h]
                   --numpy-array-use-type-var|
                   --numpy-array-remove-parameters]
                  [--print-invalid-expressions-as-is]
+                 [--print-value-comments]
                  [--print-safe-value-reprs REGEX]
                  [--exit-code]
                  [--stub-extension EXT]

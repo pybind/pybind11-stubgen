@@ -2,30 +2,16 @@ from __future__ import annotations
 
 import typing
 
-__all__: list[str] = ["Base", "CppException", "Derived", "Foo", "Outer"]
-
-class Base:
-    class Inner:
-        pass
-
-    name: str
-
-class CppException(Exception):
-    pass
-
-class Derived(Base):
-    @property
-    def count(self) -> int: ...
-    @count.setter
-    def count(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None: ...
-
-class Foo:
-    class FooChild:
-        def __init__(self) -> None: ...
-        def g(self) -> None: ...
-
-    def __init__(self) -> None: ...
-    def f(self) -> None: ...
+__all__: list[str] = [
+    "CppException",
+    "Derived",
+    "Foo",
+    "MyBase",
+    "Outer",
+    "ParIter",
+    "ParIterBase",
+    "ParticleContainer",
+]
 
 class Outer:
     class Inner:
@@ -65,3 +51,44 @@ class Outer:
         value: Outer.Inner.NestedEnum
 
     inner: Outer.Inner
+
+class MyBase:
+    class Inner:
+        pass
+
+    name: str
+
+class Derived(MyBase):
+    @property
+    def count(self) -> int: ...
+    @count.setter
+    def count(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None: ...
+
+class Foo:
+    class FooChild:
+        def __init__(self) -> None: ...
+        def g(self) -> None: ...
+
+    def __init__(self) -> None: ...
+    def f(self) -> None: ...
+
+class ParIterBase:
+    @property
+    def level(self) -> int: ...
+    @level.setter
+    def level(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None: ...
+
+class ParIter(ParIterBase):
+    def __init__(
+        self,
+        particle_container: ParticleContainer,
+        level: typing.SupportsInt | typing.SupportsIndex,
+    ) -> None: ...
+
+class ParticleContainer:
+    name: str
+    Iterator = ParIter
+    def process(self, arg0: ParIter) -> None: ...
+
+class CppException(Exception):
+    pass

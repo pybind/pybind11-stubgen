@@ -5,6 +5,7 @@ import inspect
 import re
 import sys
 import types
+import typing
 from typing import Any, Callable, TypeVar
 
 from pybind11_stubgen.parser.errors import (
@@ -48,7 +49,7 @@ class ParserDispatchMixin(IParser):
     def handle_class(self, path: QualifiedName, class_: type) -> Class | None:
         base_classes = class_.__bases__
         result = Class(name=path[-1], bases=self.handle_bases(path, base_classes))
-        for name, member in inspect.getmembers(class_):
+        for name, member in self._iter_class_members(class_):
             obj = self.handle_class_member(
                 QualifiedName([*path, Identifier(name)]), class_, member
             )
@@ -70,6 +71,30 @@ class ParserDispatchMixin(IParser):
                 raise AssertionError()
         return result
 
+    def _iter_class_members(self, class_: type):
+        seen: set[str] = set()
+
+        # Iterate __dict__ keys for definition order, but resolve values
+        # through getattr() so descriptors (staticmethod, properties, etc.)
+        # are properly unwrapped — matching inspect.getmembers() semantics.
+        for name in class_.__dict__:
+            seen.add(name)
+            try:
+                value = getattr(class_, name)
+            except AttributeError:
+                continue
+            yield name, value
+
+        # Append inherited or lazily exposed members from dir().
+        for name in dir(class_):
+            if name in seen:
+                continue
+            try:
+                value = getattr(class_, name)
+            except AttributeError:
+                continue
+            yield name, value
+
     def handle_class_member(
         self, path: QualifiedName, class_: type, member: Any
     ) -> Docstring | Alias | Class | list[Method] | Field | Property | None:
@@ -89,7 +114,7 @@ class ParserDispatchMixin(IParser):
         self, path: QualifiedName, module: types.ModuleType
     ) -> Module | None:
         result = Module(name=path[-1])
-        for name, member in inspect.getmembers(module):
+        for name, member in self._iter_module_members(module):
             obj = self.handle_module_member(
                 QualifiedName([*path, Identifier(name)]), module, member
             )
@@ -116,6 +141,24 @@ class ParserDispatchMixin(IParser):
                 raise AssertionError()
 
         return result
+
+    def _iter_module_members(self, module: types.ModuleType):
+        seen: set[str] = set()
+
+        # Preserve definition order for regular module globals, which reflects
+        # pybind11 registration order, and then append lazily exposed members.
+        for name, member in module.__dict__.items():
+            seen.add(name)
+            yield name, member
+
+        for name in dir(module):
+            if name in seen:
+                continue
+            try:
+                member = getattr(module, name)
+            except AttributeError:
+                continue
+            yield name, member
 
     def handle_module_member(
         self, path: QualifiedName, module: types.ModuleType, member: Any
@@ -254,12 +297,12 @@ class BaseParser(IParser):
                     func_args[arg_name].annotation = self.parse_annotation_str(
                         annotation
                     )
-                elif not isinstance(annotation, type):
-                    func_args[arg_name].annotation = self.handle_value(annotation)
                 elif self._is_generic_alias(annotation):
                     func_args[arg_name].annotation = self.parse_annotation_str(
                         str(annotation)
                     )
+                elif not isinstance(annotation, type):
+                    func_args[arg_name].annotation = self.handle_value(annotation)
                 else:
                     func_args[arg_name].annotation = ResolvedType(
                         name=self.handle_type(annotation),
@@ -293,9 +336,11 @@ class BaseParser(IParser):
 
     def _is_generic_alias(self, annotation: type) -> bool:
         generic_alias_t: type | None = getattr(types, "GenericAlias", None)
-        if generic_alias_t is None:
-            return False
-        return isinstance(annotation, generic_alias_t)
+        return (
+            generic_alias_t is not None
+            and isinstance(annotation, generic_alias_t)
+            or typing.get_origin(annotation) is not None
+        )
 
     def handle_import(self, path: QualifiedName, origin: Any) -> Import | None:
         full_name = self._get_full_name(path, origin)
