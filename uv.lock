@@ -19,6 +19,18 @@ wheels = [
 ]
 
 [[package]]
+name = "cmeel-eigen"
+version = "3.4.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cmeel" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/97/f3/6ff10912e6f381e6ed804680d79c04cf8f4c6d5530b1c5444b17c0e10769/cmeel_eigen-3.4.0.2.tar.gz", hash = "sha256:4c6b712ed66126f397a598e416e0903b6407bae65ddb7905d29ac4fbef550ade", size = 2721887, upload-time = "2023-11-16T00:21:57.453Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/c8/bf03f1684bdcc61f2c2cce2f8ab7d13289c67f0f6bb58288d30c318df183/cmeel_eigen-3.4.0.2-0-py3-none-any.whl", hash = "sha256:2c3efe70560aca10b9d5b9bac6c883057d30aa08fc7b8cb43f4837e935b214e4", size = 1883353, upload-time = "2023-11-16T00:21:54.205Z" },
+]
+
+[[package]]
 name = "librt"
 version = "0.7.8"
 source = { registry = "https://pypi.org/simple" }
@@ -204,6 +216,7 @@ source = { editable = "." }
 [package.dev-dependencies]
 dev = [
     { name = "cmeel" },
+    { name = "cmeel-eigen" },
     { name = "mypy" },
     { name = "numpy" },
     { name = "pip" },
@@ -218,6 +231,7 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "cmeel", specifier = "==0.59.0" },
+    { name = "cmeel-eigen", specifier = "==3.4.0.2" },
     { name = "mypy", specifier = ">=1.19.1" },
     { name = "numpy", specifier = "~=1.20" },
     { name = "pip" },

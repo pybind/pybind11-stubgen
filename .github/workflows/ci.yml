@@ -18,10 +18,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - uses: astral-sh/setup-uv@v7
       - name: Checkout
         uses: actions/checkout@v5
       - name: Install requirements
@@ -49,10 +46,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - uses: astral-sh/setup-uv@v7
 
       - name: Build sdist + wheel
         run: |
@@ -167,10 +161,7 @@ jobs:
         with:
           python-version: ${{ matrix.config.python }}
 
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - uses: astral-sh/setup-uv@v7
 
       - name: Update CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -186,7 +177,7 @@ jobs:
         run: uv pip install pytest-github-actions-annotate-failures
 
       - name: Install requirements
-        run: uv pip install -r "./tests/stubs/python-${{ matrix.config.python }}/requirements.txt"
+        run: uv sync --group dev --no-install-project
 
       - name: Install
         shell: bash
@@ -241,10 +232,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - uses: astral-sh/setup-uv@v7
 
       - name: Download build artifacts
         uses: actions/download-artifact@v6

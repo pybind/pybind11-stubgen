@@ -21,6 +21,7 @@ Issues = "https://github.com/pybind/pybind11-stubgen/issues"
 [dependency-groups]
 dev = [
     "cmeel==0.59.0",
+    "cmeel-eigen==3.4.0.2",
     "numpy~=1.20",
     "pip",
     "scipy~=1.0",
