@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import typing
 
-import numpy
-from numpy import random
-
 import demo._bindings.enum
+import numpy
 from demo._bindings.aliases.foreign_method_arg import Bar2 as foreign_type_alias
 from demo._bindings.aliases.foreign_return import get_foo as foreign_class_alias
+from numpy import random
 
 from . import (
     foreign_arg,
