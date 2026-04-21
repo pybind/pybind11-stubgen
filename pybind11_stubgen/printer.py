@@ -166,7 +166,10 @@ class Printer:
             if attr.value is not None and self.print_value_comments:
                 parts.append(f"  # value = {self.print_value(attr.value)}")
 
-        return ["".join(parts)]
+        result = ["".join(parts)]
+        if attr.doc:
+            result.extend(self.print_docstring(attr.doc))
+        return result
 
     def print_argument(self, arg: Argument) -> str:
         parts = []

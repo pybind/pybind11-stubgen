@@ -964,6 +964,19 @@ class ReplaceReadWritePropertyWithField(IParser):
         return result
 
 
+class FixMissingFieldDocString(IParser):
+    def handle_class_member(
+        self, path: QualifiedName, class_: type, obj: Any
+    ) -> Docstring | Alias | Class | list[Method] | Field | Property | None:
+        result = super().handle_class_member(path, class_, obj)
+        if isinstance(result, Field):
+            obj2 = class_.__dict__[path[-1]]
+            doc = getattr(obj2, "__doc__", None)
+            if obj is not obj2 and isinstance(doc, str):
+                result.attribute.doc = Docstring(doc)
+        return result
+
+
 class FixMissingFixedSizeImport(IParser):
     def parse_annotation_str(
         self, annotation_str: str
