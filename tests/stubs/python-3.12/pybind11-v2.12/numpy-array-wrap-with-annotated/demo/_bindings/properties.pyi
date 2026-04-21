@@ -29,7 +29,13 @@ class WithPropDoc:
     """
 
     def_property_readonly_static: typing.ClassVar[int] = 0
+    """
+    prop doc token
+    """
     def_property_static: typing.ClassVar[int] = 0
+    """
+    prop doc token
+    """
     @property
     def def_property(self) -> int:
         """
@@ -61,7 +67,13 @@ class WithGetterSetterDoc:
     """
 
     def_property_readonly_static: typing.ClassVar[int] = 0
+    """
+    getter doc token
+    """
     def_property_static: typing.ClassVar[int] = 0
+    """
+    getter doc token
+    """
     @property
     def def_property(self) -> int:
         """
@@ -84,7 +96,13 @@ class WithPropAndGetterSetterDoc:
     """
 
     def_property_readonly_static: typing.ClassVar[int] = 0
+    """
+    prop doc token
+    """
     def_property_static: typing.ClassVar[int] = 0
+    """
+    prop doc token
+    """
     @property
     def def_property(self) -> int:
         """
