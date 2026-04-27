@@ -965,13 +965,21 @@ class ReplaceReadWritePropertyWithField(IParser):
 
 
 class FixMissingFieldDocString(IParser):
+    """Extracts docstrings for `def_property_readonly_static` and `def_property_static`."""
+    
     def handle_class_member(
         self, path: QualifiedName, class_: type, obj: Any
     ) -> Docstring | Alias | Class | list[Method] | Field | Property | None:
         result = super().handle_class_member(path, class_, obj)
+        
+        # `ParserDispatchMixin.handle_class_member` classifies static properties as `Field` instead of `Property`.
         if isinstance(result, Field):
             obj2 = class_.__dict__[path[-1]]
             doc = getattr(obj2, "__doc__", None)
+            
+            # If the current item is a static property, `obj` contains the fully resolved value, 
+            # but `obj2` contains a `pybind11_builtins.pybind11_static_property` proxy object.
+            # In Python 3.12+, this proxy object has a `__doc__` attribute.
             if obj is not obj2 and isinstance(doc, str):
                 result.attribute.doc = Docstring(doc)
         return result
