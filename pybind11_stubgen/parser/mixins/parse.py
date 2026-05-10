@@ -77,7 +77,8 @@ class ParserDispatchMixin(IParser):
         # Iterate __dict__ keys for definition order, but resolve values
         # through getattr() so descriptors (staticmethod, properties, etc.)
         # are properly unwrapped — matching inspect.getmembers() semantics.
-        for name in class_.__dict__:
+        names = list(class_.__dict__);
+        for name in names:
             seen.add(name)
             try:
                 value = getattr(class_, name)
