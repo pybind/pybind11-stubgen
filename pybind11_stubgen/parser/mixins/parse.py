@@ -800,7 +800,7 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
     ) -> list[tuple[str, str | None, str | None]] | None:
         result = []
 
-        closing = {"(": ")", "{": "}", "[": "]"}
+        closing = {"(": ")", "{": "}", "[": "]", "<": ">"}
         stack = []
         i = 0
         arg_begin = 0
@@ -867,7 +867,7 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
 
     def _split_str(self, param_str: str, delim: str):
         result = []
-        closing = {"(": ")", "{": "}", "[": "]"}
+        closing = {"(": ")", "{": "}", "[": "]", "<": ">"}
         stack = []
         i = 0
         arg_begin = 0
