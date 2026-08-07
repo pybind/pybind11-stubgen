@@ -183,8 +183,7 @@ def arg_parser() -> ArgumentParser:
         "--print-invalid-expressions-as-is",
         default=False,
         action="store_true",
-        help="Suppress the replacement with '...' of invalid expressions"
-        "found in annotations",
+        help="Remove the quotation marks around invalid expressions found in annotations",
     )
 
     parser.add_argument(
@@ -323,7 +322,7 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     parser = stub_parser_from_args(args)
     printer = Printer(
-        invalid_expr_as_ellipses=not args.print_invalid_expressions_as_is,
+        invalid_expr_in_quotation_marks=not args.print_invalid_expressions_as_is,
         print_value_comments=args.print_value_comments,
     )
 
