@@ -139,10 +139,10 @@ def _topological_sort_classes(classes: list[Class]) -> list[Class]:
 class Printer:
     def __init__(
         self,
-        invalid_expr_as_ellipses: bool,
+        invalid_expr_in_quotation_marks: bool,
         print_value_comments: bool = False,
     ):
-        self.invalid_expr_as_ellipses = invalid_expr_as_ellipses
+        self.invalid_expr_in_quotation_marks = invalid_expr_in_quotation_marks
         self.print_value_comments = print_value_comments
 
     def _order_classes(self, classes: list[Class]) -> list[Class]:
@@ -440,6 +440,6 @@ class Printer:
             raise AssertionError()
 
     def print_invalid_exp(self, invalid_expr: InvalidExpression) -> str:
-        if self.invalid_expr_as_ellipses:
-            return "..."
+        if self.invalid_expr_in_quotation_marks:
+            return f"'{invalid_expr.text}'"
         return invalid_expr.text
