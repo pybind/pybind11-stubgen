@@ -1126,9 +1126,19 @@ class RewritePybind11EnumValueRepr(IParser):
     def __init__(self):
         super().__init__()
         self._pybind11_enum_locations: dict[re.Pattern, str] = {}
+        self._rewrite_enum_current_module: QualifiedName = QualifiedName()
 
     def set_pybind11_enum_locations(self, locations: dict[re.Pattern, str]):
         self._pybind11_enum_locations = locations
+
+    def handle_module(
+        self, path: QualifiedName, module: types.ModuleType
+    ) -> Module | None:
+        old = self._rewrite_enum_current_module
+        self._rewrite_enum_current_module = path
+        result = super().handle_module(path, module)
+        self._rewrite_enum_current_module = old
+        return result
 
     def parse_value_str(self, value: str) -> Value | InvalidExpression:
         value = value.strip()
@@ -1141,8 +1151,38 @@ class RewritePybind11EnumValueRepr(IParser):
                     continue
                 enum_class = self.parse_annotation_str(f"{prefix}.{enum_class_str}")
                 if isinstance(enum_class, ResolvedType):
+                    if self._is_ancestor_attr_path(enum_class.name):
+                        # Issue #304: a default expression rooted at a
+                        # proper ancestor package of the current module
+                        # (e.g. ``demo.NativeColor.Red`` inside the
+                        # ``demo._bindings.enum`` stub) is evaluated at
+                        # stub-import time. The ancestor's namespace is
+                        # populated mid-``__init__`` by wildcard re-
+                        # exports, so if the stub is imported during
+                        # that init the lookup fails with a circular-
+                        # import ``AttributeError``. The argument's
+                        # type annotation is already rendered in the
+                        # short form, so the enum class is in scope.
+                        return Value(
+                            repr=f"{enum_class_str}.{entry}",
+                            is_print_safe=True,
+                        )
                     return Value(repr=f"{enum_class.name}.{entry}", is_print_safe=True)
         return super().parse_value_str(value)
+
+    def _is_ancestor_attr_path(self, name: QualifiedName) -> bool:
+        """Would evaluating ``name`` cross an ancestor package attribute?
+
+        The enum class itself is ``name[-1]``; the segments preceding
+        it form the containing path. Return True when that containing
+        path is a *proper* ancestor (strict prefix) of the module
+        currently being processed, and False otherwise.
+        """
+        container = name[:-1]
+        if len(container) == 0:
+            return False
+        current = self._rewrite_enum_current_module
+        return len(current) > len(container) and current[: len(container)] == container
 
     def report_error(self, error: ParserError) -> None:
         if isinstance(error, InvalidExpressionError):
