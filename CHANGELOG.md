@@ -2,7 +2,7 @@ Changelog
 =========
 
 Version 3.0.0 (Sep 24, 2026)
---------------------------
+----------------------------
 Maintainership has passed from @sizmailov to @ax3l, @skarndev, and @virtuald,
 and the repository has been transferred to the pybind11 organization.
 Many thanks to @sizmailov for creating pybind11-stubgen and maintaining it over the years!
