@@ -385,3 +385,95 @@ def test_failure_artifacts_are_unique_and_skip_symlinks_and_special_files(tmp_pa
     for run in runs:
         assert set(h.read_tree(run)) == {"output/x.pyi", "context.txt", "failure.txt"}
     assert h.read_tree(refs) == {"case/x.pyi": b"keep"}
+
+
+@pytest.mark.parametrize("relation", ["inside", "same", "ancestor"])
+@pytest.mark.parametrize("through_alias", [False, True])
+def test_diagnostics_rejects_reference_overlapping_workspaces(tmp_path, relation, through_alias):
+    refs = tmp_path / "refs"
+    write_files(refs / "case", {"x.pyi": b"keep"})
+    workspace = {"inside": refs / "work", "same": refs, "ancestor": tmp_path}[relation]
+    if through_alias:
+        alias = tmp_path / "alias"
+        alias.symlink_to(workspace, target_is_directory=True)
+        workspace = alias
+    body_ran = False
+    with pytest.raises(h.HarnessError) as failure:
+        with h.diagnostics(workspace, artifacts=None, reference_roots=(refs,),
+                           case_id="case", check_name="stubs", expected=refs / "case"):
+            body_ran = True
+            raise h.SnapshotMismatch("Changed: x.pyi\n")
+    assert h.read_tree(refs) == {"case/x.pyi": b"keep"}
+    assert not body_ran
+    assert "reference" in str(failure.value)
+
+
+@pytest.mark.parametrize("name", ["context.txt", "failure.txt", "diff.patch"])
+def test_diagnostic_writes_do_not_follow_reference_symlinks(tmp_path, name):
+    refs = tmp_path / "refs"
+    write_files(refs / "case", {"x.pyi": b"keep"})
+    workspace = tmp_path / "work"
+    workspace.mkdir()
+    if name == "context.txt":
+        (workspace / name).symlink_to(refs / "case/x.pyi")
+    error = h.SnapshotMismatch("Changed: x.pyi\n")
+    with pytest.raises(h.HarnessError) as failure:
+        with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
+                           reference_roots=(refs,), case_id="case", check_name="stubs",
+                           expected=refs / "case"):
+            if name != "context.txt":
+                (workspace / name).symlink_to(refs / "case/x.pyi")
+            raise error
+    assert h.read_tree(refs) == {"case/x.pyi": b"keep"}
+    assert failure.value.__cause__ is error
+    assert not (workspace / name).is_symlink()
+    assert "Artifacts:" in str(failure.value)
+
+
+@pytest.mark.parametrize("name", ["context.txt", "failure.txt", "diff.patch"])
+def test_diagnostic_write_errors_preserve_context(tmp_path, name):
+    workspace = tmp_path / "work"
+    blocked = workspace / name
+    blocked.mkdir(parents=True)
+    expected = tmp_path / "refs/case"
+    error = h.SnapshotMismatch("Changed: x.pyi\n")
+    body_ran = False
+    with pytest.raises(h.HarnessError) as failure:
+        with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
+                           reference_roots=(tmp_path / "refs",), case_id="case",
+                           check_name="stubs", expected=expected):
+            body_ran = True
+            raise error
+    summary = str(failure.value)
+    assert "case/stubs" in summary
+    assert str(expected) in summary and str(workspace) in summary
+    assert str(blocked) in summary
+    assert "Diagnostic write failed" in summary
+    if name == "context.txt":
+        assert not body_ran
+        assert isinstance(failure.value.__cause__, OSError)
+    else:
+        assert failure.value.__cause__ is error
+        assert "Changed: x.pyi" in summary
+        assert "Artifacts:" in summary
+
+
+def test_artifact_retention_errors_preserve_original_failure_and_locations(tmp_path):
+    workspace = tmp_path / "work"
+    artifacts = tmp_path / "artifacts"
+    artifacts.write_bytes(b"not a directory")
+    expected = tmp_path / "refs/case"
+    error = h.SnapshotMismatch("Changed: x.pyi\n")
+    with pytest.raises(h.HarnessError) as failure:
+        with h.diagnostics(workspace, artifacts=artifacts,
+                           reference_roots=(tmp_path / "refs",), case_id="case",
+                           check_name="stubs", expected=expected):
+            raise error
+    summary = str(failure.value)
+    assert failure.value.__cause__ is error
+    assert "Changed: x.pyi" in summary and "case/stubs" in summary
+    assert str(workspace) in summary and str(expected) in summary
+    assert "Artifact retention failed" in summary
+    assert str(artifacts / "case/stubs") in summary
+    assert "Changed: x.pyi" in (workspace / "failure.txt").read_text()
+    assert artifacts.read_bytes() == b"not a directory"

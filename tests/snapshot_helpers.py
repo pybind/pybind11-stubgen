@@ -219,12 +219,24 @@ def format_stubs(
                 cwd=workspace, log=workspace / "ruff-check")
 
 
+def _write_diagnostic(path: Path, content: str) -> None:
+    # Replace existing links rather than following them; exclusive creation also
+    # refuses a link introduced between unlinking and opening the file.
+    path.unlink(missing_ok=True)
+    with path.open("x", encoding="utf-8") as stream:
+        stream.write(content)
+
+
 @contextmanager
 def diagnostics(
     workspace: Path, *, artifacts: Path | None, reference_roots: tuple[Path, ...],
     case_id: str, check_name: str, expected: Path,
 ) -> Iterator[None]:
     workspace = workspace.resolve()
+    for root in reference_roots:
+        root = root.resolve()
+        if workspace.is_relative_to(root) or root.is_relative_to(workspace):
+            raise HarnessError("Working workspace overlaps a reference tree")
     artifact_parent = None
     for component in (case_id, check_name):
         if len(relative_file(component).parts) != 1:
@@ -239,25 +251,38 @@ def diagnostics(
                 raise HarnessError("Artifact destination is inside a reference tree")
         if artifact_parent.is_relative_to(workspace):
             raise HarnessError("Artifact destination is inside the working workspace")
-    workspace.mkdir(parents=True, exist_ok=True)
     context = f"Case: {case_id}/{check_name}\nReference: {expected.resolve()}\nWorkspace: {workspace}\n"
-    (workspace / "context.txt").write_text(context, encoding="utf-8")
+    try:
+        workspace.mkdir(parents=True, exist_ok=True)
+        _write_diagnostic(workspace / "context.txt", context)
+    except OSError as error:
+        raise HarnessError(f"{context}Diagnostic write failed: {error}") from error
     try:
         yield
     except Exception as error:
         summary = context + str(error)
-        (workspace / "failure.txt").write_text(summary, encoding="utf-8")
+        files = {"failure.txt": summary}
         if isinstance(error, SnapshotMismatch):
-            (workspace / "diff.patch").write_text(str(error), encoding="utf-8")
+            files["diff.patch"] = str(error)
+        for name, content in files.items():
+            try:
+                _write_diagnostic(workspace / name, content)
+            except OSError as diagnostic_error:
+                summary += f"\nDiagnostic write failed ({workspace / name}): {diagnostic_error}"
         if artifact_parent is not None:
-            artifact_parent.mkdir(parents=True, exist_ok=True)
-            destination = Path(tempfile.mkdtemp(prefix="run-", dir=artifact_parent))
-            for source in workspace.rglob("*"):
-                # Never dereference rejected output symlinks while retaining diagnostics.
-                if source.is_symlink() or not source.is_file():
-                    continue
-                target = destination / source.relative_to(workspace)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(source, target)
-            summary += f"\nArtifacts: {destination}"
+            destination = artifact_parent
+            try:
+                artifact_parent.mkdir(parents=True, exist_ok=True)
+                destination = Path(tempfile.mkdtemp(prefix="run-", dir=artifact_parent))
+                for source in workspace.rglob("*"):
+                    # Never dereference rejected output symlinks while retaining diagnostics.
+                    if source.is_symlink() or not source.is_file():
+                        continue
+                    target = destination / source.relative_to(workspace)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(source, target)
+            except OSError as retention_error:
+                summary += f"\nArtifact retention failed ({destination}): {retention_error}"
+            else:
+                summary += f"\nArtifacts: {destination}"
         raise HarnessError(summary) from error
