@@ -43,19 +43,13 @@ pybind11-stubgen [-h]
 Contributing
 ------------
 
-During development, you may need to update the reference stubs in tests/stubs. This can be done locally using a convenience tox configuration. Ensure that all Python interpreters required by the test suite are available in your environment. For example, you can install them via uv:
-```shell
-uv python install 3.10 3.11 3.12 3.13
-```
-To enable the repository hooks locally:
-```shell
+See [the testing guide](tests/README.md) for prerequisites, running checks,
+updating reference snapshots, and adding regression fixtures. Normal test runs
+do not update or stage reference files.
+
+To enable repository hooks locally:
+
+```sh
 uv sync
 uv run pre-commit install
-```
-To regenerate the reference stubs run:
-```shell
-uv venv
-source .venv/bin/activate
-uv tool install tox --with tox-uv
-uv run tox
 ```
