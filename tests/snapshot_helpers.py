@@ -189,10 +189,7 @@ def run_command(
         problem = "timed out after 300 seconds"
     except OSError as error:
         problem = str(error)
-    log.parent.mkdir(parents=True, exist_ok=True)
-    log.with_suffix(".stdout").write_bytes(stdout)
-    log.with_suffix(".stderr").write_bytes(stderr)
-    log.with_suffix(".json").write_text(
+    metadata = (
         json.dumps(
             {
                 "command": argv,
@@ -202,15 +199,38 @@ def run_command(
             },
             indent=2,
         )
-        + "\n",
-        encoding="utf-8",
+        + "\n"
     )
-    if problem is not None:
-        raise HarnessError(
+    log_errors = []
+    try:
+        log.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        log_errors.append(f"Log persistence failed ({log.parent}): {error}")
+    else:
+        # A failed log must not hide process diagnostics or prevent other writes.
+        for suffix, content in ((".stdout", stdout), (".stderr", stderr)):
+            path = log.with_suffix(suffix)
+            try:
+                path.write_bytes(content)
+            except OSError as error:
+                log_errors.append(f"Log persistence failed ({path}): {error}")
+        path = log.with_suffix(".json")
+        try:
+            path.write_text(metadata, encoding="utf-8")
+        except OSError as error:
+            log_errors.append(f"Log persistence failed ({path}): {error}")
+    if problem is not None or log_errors:
+        if problem is None:
+            assert result is not None
+            problem = f"exit {result.returncode}, expected {expected_status}"
+        summary = (
             f"{argv!r}: {problem}\nLogs: {log}\n"
             f"stdout:\n{stdout.decode('utf-8', errors='replace')}\n"
             f"stderr:\n{stderr.decode('utf-8', errors='replace')}"
         )
+        if log_errors:
+            summary += "\n" + "\n".join(log_errors)
+        raise HarnessError(summary)
     assert result is not None
     return result
 

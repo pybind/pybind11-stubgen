@@ -243,6 +243,127 @@ def test_missing_command_and_timeout_are_diagnostic(tmp_path, monkeypatch):
     assert (tmp_path / "timeout.stderr").read_bytes() == b"stuck"
 
 
+@pytest.mark.parametrize("suffix", [".stdout", ".stderr", ".json"])
+@pytest.mark.parametrize("status", [0, 2])
+def test_run_command_log_failure_preserves_context_and_other_logs(
+    tmp_path, suffix, status
+):
+    log = tmp_path / "process"
+    blocked = log.with_suffix(suffix)
+    blocked.mkdir()
+    command = [
+        sys.executable,
+        "-c",
+        "import sys; print('captured output'); "
+        f"print('captured error', file=sys.stderr); sys.exit({status})",
+    ]
+    with pytest.raises(h.HarnessError) as failure:
+        h.run_command(command, cwd=tmp_path, log=log)
+    summary = str(failure.value)
+    assert repr(command) in summary
+    assert f"exit {status}, expected 0" in summary
+    assert "stdout:\ncaptured output\n" in summary
+    assert "stderr:\ncaptured error\n" in summary
+    assert "Log persistence failed" in summary
+    assert str(blocked) in summary and "[Errno" in summary
+    if suffix != ".stdout":
+        assert log.with_suffix(".stdout").read_bytes() == b"captured output\n"
+    if suffix != ".stderr":
+        assert log.with_suffix(".stderr").read_bytes() == b"captured error\n"
+    if suffix != ".json":
+        metadata = json.loads(log.with_suffix(".json").read_text())
+        assert metadata == {
+            "command": command,
+            "cwd": str(tmp_path),
+            "returncode": status,
+            "error": None if status == 0 else "exit 2, expected 0",
+        }
+
+
+@pytest.mark.parametrize("suffix", [".stdout", ".stderr", ".json"])
+def test_run_command_log_failure_preserves_timeout(tmp_path, monkeypatch, suffix):
+    log = tmp_path / "timeout"
+    blocked = log.with_suffix(suffix)
+    blocked.mkdir()
+
+    def timeout(argv, **kwargs):
+        raise subprocess.TimeoutExpired(argv, 300, output=b"partial", stderr=b"stuck")
+
+    monkeypatch.setattr(h.subprocess, "run", timeout)
+    with pytest.raises(h.HarnessError) as failure:
+        h.run_command(["fake"], cwd=tmp_path, log=log)
+    summary = str(failure.value)
+    assert "['fake']: timed out after 300 seconds" in summary
+    assert "stdout:\npartial" in summary and "stderr:\nstuck" in summary
+    assert "Log persistence failed" in summary and str(blocked) in summary
+    if suffix != ".json":
+        metadata = json.loads(log.with_suffix(".json").read_text())
+        assert metadata["returncode"] is None
+        assert metadata["error"] == "timed out after 300 seconds"
+
+
+@pytest.mark.parametrize("missing_command", [False, True])
+def test_run_command_log_directory_failure_preserves_process_context(
+    tmp_path, missing_command
+):
+    blocked = tmp_path / "not-a-directory"
+    blocked.write_bytes(b"keep")
+    command = (
+        [str(tmp_path / "missing-command")]
+        if missing_command
+        else [sys.executable, "-c", "import sys; print('captured'); sys.exit(2)"]
+    )
+    with pytest.raises(h.HarnessError) as failure:
+        h.run_command(command, cwd=tmp_path, log=blocked / "process")
+    summary = str(failure.value)
+    assert repr(command) in summary
+    if missing_command:
+        assert "No such file or directory" in summary
+    else:
+        assert "exit 2, expected 0" in summary
+        assert "stdout:\ncaptured\n" in summary
+    assert "Log persistence failed" in summary and str(blocked) in summary
+    assert blocked.read_bytes() == b"keep"
+
+
+def test_run_command_log_failure_survives_outer_diagnostics(tmp_path):
+    workspace = tmp_path / "work"
+    expected = tmp_path / "refs/case"
+    command = [
+        sys.executable,
+        "-c",
+        "import sys; print('captured output'); "
+        "print('captured error', file=sys.stderr); sys.exit(2)",
+    ]
+    with pytest.raises(h.HarnessError) as failure:
+        with h.diagnostics(
+            workspace,
+            artifacts=tmp_path / "artifacts",
+            reference_roots=(tmp_path / "refs",),
+            case_id="case",
+            check_name="stubs",
+            expected=expected,
+        ):
+            (workspace / "process.stderr").mkdir()
+            h.run_command(command, cwd=workspace, log=workspace / "process")
+    summary = str(failure.value)
+    assert "case/stubs" in summary and str(expected) in summary
+    assert "Artifacts:" in summary
+    runs = list((tmp_path / "artifacts/case/stubs").iterdir())
+    assert len(runs) == 1
+    retained = (runs[0] / "failure.txt").read_text()
+    assert retained == (workspace / "failure.txt").read_text()
+    for text in (summary, retained):
+        assert repr(command) in text
+        assert "exit 2, expected 0" in text
+        assert "stdout:\ncaptured output\n" in text
+        assert "stderr:\ncaptured error\n" in text
+        assert "Log persistence failed" in text
+        assert str(workspace / "process.stderr") in text
+    assert (runs[0] / "process.stdout").read_bytes() == b"captured output\n"
+    assert json.loads((runs[0] / "process.json").read_text())["returncode"] == 2
+
+
 @pytest.mark.parametrize(
     "status,stderr,files",
     [
