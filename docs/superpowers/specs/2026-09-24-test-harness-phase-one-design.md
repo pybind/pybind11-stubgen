@@ -2,7 +2,9 @@
 
 Date: 2026-09-24
 
-Status: Design approved in chat; written specification awaiting review.
+Status: Written specification approved in chat on 2026-09-24.
+
+Implementation plan: [phase-one pytest harness](../plans/2026-09-24-test-harness-phase-one.md).
 
 Repository baseline: `5057f41` (`Prepare 3.0 release`).
 
