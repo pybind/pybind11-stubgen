@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Version 3.0.0 (Sep 23, 2026)
+Version 3.0.0 (Sep 24, 2026)
 --------------------------
 Maintainership has passed from @sizmailov to @ax3l, @skarndev, and @virtuald,
 and the repository has been transferred to the pybind11 organization.
