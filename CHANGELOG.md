@@ -1,6 +1,39 @@
 Changelog
 =========
 
+Version 3.0.0 (Sep 23, 2026)
+--------------------------
+Maintainership has passed from @sizmailov to @ax3l, @skarndev, and @virtuald,
+and the repository has been transferred to the pybind11 organization.
+Many thanks to @sizmailov for creating pybind11-stubgen and maintaining it over the years!
+
+Breaking changes:
+- ❗️ Require Python 3.10 or newer; drop support for Python 3.7–3.9 (#284, #285)
+- ❗️ Disable `# value = ...` comments by default; use `--print-value-comments` to restore them (#251)
+
+Changes:
+- ✨ Support generating stubs for multiple modules in a single CLI invocation (#292)
+- ✨ Add basic support for PEP 695 function type parameters in docstring signatures on Python 3.12+;
+  class type parameters, variadics, and constraints are not supported (#291)
+- ✨ Preserve docstrings for static properties exposed as fields, with Python 3.12+ and pybind11 2.10.1+ (#308)
+- 🐛 Order classes by dependencies rather than alphabetically, so base classes and class-body references
+  appear before their dependents, including nested classes (#238)
+- 🐛 Fix nested qualified names in pybind11 docstring signatures (#280)
+- 🐛 Strip current-module prefixes from nested type annotations and correctly parse runtime generic annotations (#301)
+- 🐛 Resolve hidden builtin types, such as `mappingproxy`, to their importable names in `types` (#278)
+- 🐛 Filter internal members of pybind11 native enums (#303)
+- 🐛 Avoid `RuntimeError: dictionary changed size during iteration` when attribute access modifies a class dictionary (#310)
+- 🐛 Make ordering of aliased and non-aliased imports deterministic (#293)
+- 🐛 Remove unstable memory addresses from additional object representations, including `WeakKeyDictionary` (#295)
+- 🐛 Remove leading newlines from docstrings to avoid extra blank lines in generated stubs (#274)
+
+Development:
+- 🔧 Move package metadata from `setup.py` to `pyproject.toml` (#281)
+- 🔧 Add pybind11 3.0 test coverage and update expected stubs for pybind11 3.0.3 (#289, #296)
+- 🔧 Add local test-stub regeneration via tox and fix demo builds on Clang/macOS (#287)
+- 🔧 Modernize CI and publishing, migrate development tooling to uv and Ruff, and automate pre-commit updates (#279, #283, #290, #307, #314)
+
+
 Version 2.5.5 (Aug 10, 2025)
 --------------------------
 Changes:
