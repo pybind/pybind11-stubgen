@@ -81,14 +81,24 @@ def diff_tree(expected: Snapshot, actual: Snapshot) -> str:
     for name in sorted(expected.keys() | actual.keys()):
         if name in expected and name in actual and expected[name] == actual[name]:
             continue
-        kind = "Missing" if name not in actual else "Unexpected" if name not in expected else "Changed"
+        kind = (
+            "Missing"
+            if name not in actual
+            else "Unexpected"
+            if name not in expected
+            else "Changed"
+        )
         differences.append(f"{kind}: {name}\n")
         before = expected.get(name, b"").decode("utf-8", errors="backslashreplace")
         after = actual.get(name, b"").decode("utf-8", errors="backslashreplace")
-        differences.extend(difflib.unified_diff(
-            before.splitlines(keepends=True), after.splitlines(keepends=True),
-            fromfile=f"expected/{name}", tofile=f"actual/{name}",
-        ))
+        differences.extend(
+            difflib.unified_diff(
+                before.splitlines(keepends=True),
+                after.splitlines(keepends=True),
+                fromfile=f"expected/{name}",
+                tofile=f"actual/{name}",
+            )
+        )
     return "".join(differences)
 
 
@@ -97,8 +107,12 @@ class SnapshotMismatch(HarnessError):
 
 
 def check_snapshot(
-    root: Path, profile: Path, actual: Snapshot, *,
-    update: bool = False, only: frozenset[str] | None = None,
+    root: Path,
+    profile: Path,
+    actual: Snapshot,
+    *,
+    update: bool = False,
+    only: frozenset[str] | None = None,
 ) -> tuple[str, ...]:
     for name, content in actual.items():
         path = relative_file(name)
@@ -124,15 +138,22 @@ def check_snapshot(
         return ()
     if not update:
         raise SnapshotMismatch(difference)
-    changed = tuple(sorted(
-        name for name in expected.keys() | actual.keys()
-        if name not in expected or name not in actual or expected[name] != actual[name]
-    ))
+    changed = tuple(
+        sorted(
+            name
+            for name in expected.keys() | actual.keys()
+            if name not in expected
+            or name not in actual
+            or expected[name] != actual[name]
+        )
+    )
     for name in expected.keys() - actual.keys():
         (destination / relative_file(name)).unlink()
     if only is None:
         directories = [path for path in destination.rglob("*") if path.is_dir()]
-        for directory in sorted(directories, key=lambda path: len(path.parts), reverse=True):
+        for directory in sorted(
+            directories, key=lambda path: len(path.parts), reverse=True
+        ):
             try:
                 directory.rmdir()
             except OSError as error:
@@ -147,13 +168,19 @@ def check_snapshot(
 
 
 def run_command(
-    argv: list[str], *, cwd: Path, log: Path, expected_status: int = 0,
+    argv: list[str],
+    *,
+    cwd: Path,
+    log: Path,
+    expected_status: int = 0,
 ) -> subprocess.CompletedProcess[bytes]:
     result = None
     stdout = stderr = b""
     problem = None
     try:
-        result = subprocess.run(argv, cwd=cwd, capture_output=True, timeout=300, check=False)
+        result = subprocess.run(
+            argv, cwd=cwd, capture_output=True, timeout=300, check=False
+        )
         stdout, stderr = result.stdout, result.stderr
         if result.returncode != expected_status:
             problem = f"exit {result.returncode}, expected {expected_status}"
@@ -165,11 +192,19 @@ def run_command(
     log.parent.mkdir(parents=True, exist_ok=True)
     log.with_suffix(".stdout").write_bytes(stdout)
     log.with_suffix(".stderr").write_bytes(stderr)
-    log.with_suffix(".json").write_text(json.dumps({
-        "command": argv, "cwd": str(cwd),
-        "returncode": result.returncode if result is not None else None,
-        "error": problem,
-    }, indent=2) + "\n", encoding="utf-8")
+    log.with_suffix(".json").write_text(
+        json.dumps(
+            {
+                "command": argv,
+                "cwd": str(cwd),
+                "returncode": result.returncode if result is not None else None,
+                "error": problem,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     if problem is not None:
         raise HarnessError(
             f"{argv!r}: {problem}\nLogs: {log}\n"
@@ -184,7 +219,9 @@ def normalize_stderr(stderr: bytes) -> bytes:
     return re.sub(rb"0x[0-9A-Fa-f]+", b"0x1234abcd5678", stderr)
 
 
-def validate_error_run(result: subprocess.CompletedProcess[bytes], output: Path) -> bytes:
+def validate_error_run(
+    result: subprocess.CompletedProcess[bytes], output: Path
+) -> bytes:
     if result.returncode != 1:
         raise HarnessError(f"Expected fatal-error exit 1, got {result.returncode}")
     if b"Traceback (most recent call last)" in result.stderr:
@@ -199,25 +236,43 @@ def validate_error_run(result: subprocess.CompletedProcess[bytes], output: Path)
 def ruff_version(repo: Path) -> str:
     text = (repo / ".pre-commit-config.yaml").read_text(encoding="utf-8")
     blocks = re.split(r"(?m)^\s*-\s+repo:\s*", text)[1:]
-    blocks = [block for block in blocks if block.splitlines()[0].strip().strip("\"'")
-              == "https://github.com/astral-sh/ruff-pre-commit"]
+    blocks = [
+        block
+        for block in blocks
+        if block.splitlines()[0].strip().strip("\"'")
+        == "https://github.com/astral-sh/ruff-pre-commit"
+    ]
     if len(blocks) != 1:
         raise HarnessError("Cannot identify the Ruff pre-commit pin")
-    match = re.search(r'''(?m)^\s*rev:\s*["']?v?(\d+\.\d+\.\d+)["']?\s*$''', blocks[0])
+    match = re.search(r"""(?m)^\s*rev:\s*["']?v?(\d+\.\d+\.\d+)["']?\s*$""", blocks[0])
     if match is None:
         raise HarnessError("Cannot resolve the Ruff pre-commit version")
     return match.group(1)
 
 
 def format_stubs(
-    output: Path, repo: Path, workspace: Path, python_version: tuple[int, int],
+    output: Path,
+    repo: Path,
+    workspace: Path,
+    python_version: tuple[int, int],
 ) -> None:
     prefix = ["uvx", "--from", f"ruff=={ruff_version(repo)}", "ruff"]
-    options = ["--config", str(repo / "pyproject.toml"), "--target-version",
-               f"py{python_version[0]}{python_version[1]}", "--no-cache", str(output)]
-    run_command(prefix + ["format"] + options, cwd=workspace, log=workspace / "ruff-format")
-    run_command(prefix + ["check", "--select", "I,RUF022", "--fix"] + options,
-                cwd=workspace, log=workspace / "ruff-check")
+    options = [
+        "--config",
+        str(repo / "pyproject.toml"),
+        "--target-version",
+        f"py{python_version[0]}{python_version[1]}",
+        "--no-cache",
+        str(output),
+    ]
+    run_command(
+        prefix + ["format"] + options, cwd=workspace, log=workspace / "ruff-format"
+    )
+    run_command(
+        prefix + ["check", "--select", "I,RUF022", "--fix"] + options,
+        cwd=workspace,
+        log=workspace / "ruff-check",
+    )
 
 
 def _write_diagnostic(path: Path, content: str) -> None:
@@ -230,8 +285,13 @@ def _write_diagnostic(path: Path, content: str) -> None:
 
 @contextmanager
 def diagnostics(
-    workspace: Path, *, artifacts: Path | None, reference_roots: tuple[Path, ...],
-    case_id: str, check_name: str, expected: Path,
+    workspace: Path,
+    *,
+    artifacts: Path | None,
+    reference_roots: tuple[Path, ...],
+    case_id: str,
+    check_name: str,
+    expected: Path,
 ) -> Iterator[None]:
     workspace = workspace.resolve()
     for root in reference_roots:
@@ -248,7 +308,9 @@ def diagnostics(
         if not artifact_parent.is_relative_to(base):
             raise HarnessError("Artifact identifiers escape their destination")
         for candidate in (base, artifact_parent):
-            if any(candidate.is_relative_to(root.resolve()) for root in reference_roots):
+            if any(
+                candidate.is_relative_to(root.resolve()) for root in reference_roots
+            ):
                 raise HarnessError("Artifact destination is inside a reference tree")
         if artifact_parent.is_relative_to(workspace):
             raise HarnessError("Artifact destination is inside the working workspace")
@@ -283,7 +345,9 @@ def diagnostics(
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(source, target)
             except OSError as retention_error:
-                summary += f"\nArtifact retention failed ({destination}): {retention_error}"
+                summary += (
+                    f"\nArtifact retention failed ({destination}): {retention_error}"
+                )
             else:
                 summary += f"\nArtifacts: {destination}"
         raise HarnessError(summary) from error
@@ -316,7 +380,11 @@ class DemoCase:
     @property
     def stub_profile(self) -> Path:
         major, minor = self.python_version
-        return Path(f"python-{major}.{minor}") / f"pybind11-{self.branch}" / self.numpy_format
+        return (
+            Path(f"python-{major}.{minor}")
+            / f"pybind11-{self.branch}"
+            / self.numpy_format
+        )
 
     @property
     def error_profile(self) -> Path:
@@ -324,12 +392,17 @@ class DemoCase:
 
 
 def make_case(
-    repo: Path, python_version: tuple[int, int], branch: str | None, numpy_format: str | None,
+    repo: Path,
+    python_version: tuple[int, int],
+    branch: str | None,
+    numpy_format: str | None,
 ) -> DemoCase:
     if python_version < (3, 10):
         raise HarnessError("The test harness requires Python >=3.10")
     if branch not in BRANCHES or numpy_format not in NUMPY_FORMATS:
-        raise HarnessError("Native tests require --pybind11-branch and --numpy-format; use tox to build the matching demo")
+        raise HarnessError(
+            "Native tests require --pybind11-branch and --numpy-format; use tox to build the matching demo"
+        )
     case = DemoCase(repo.resolve(), python_version, branch, numpy_format)
     resolve_profile(case.stubs_root, case.stub_profile)
     resolve_profile(case.errors_root, case.error_profile)

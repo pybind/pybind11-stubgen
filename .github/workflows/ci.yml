@@ -182,26 +182,24 @@ jobs:
           source .venv/bin/activate
           ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.config.pybind11-branch }}"
 
-      - name: Check stubs generation
+      - name: Check installed wheel and demo snapshots
         shell: bash
         run: |
           source .venv/bin/activate
-          ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}" --${{ matrix.config.numpy-format }}
+          python -I -c 'import sys; from pathlib import Path; import pybind11_stubgen; p = Path(pybind11_stubgen.__file__).resolve(); assert p.is_relative_to(Path(sys.prefix).resolve()), p; print(p)'
+          python -m pytest tests/test_snapshot_helpers.py tests/test_demo_stubs.py tests/test_demo_errors.py \
+            --pybind11-branch "${{ matrix.config.pybind11-branch }}" \
+            --numpy-format "${{ matrix.config.numpy-format }}" \
+            --artifacts-dir tmp/pytest-artifacts/ --maxfail=0
 
-      - name: Archive patch
+      - name: Archive test diagnostics
         uses: actions/upload-artifact@v6
         if: failure()
         with:
-          name: "python-${{ matrix.config.python }}-pybind-${{ matrix.config.pybind11-branch }}-${{ matrix.config.numpy-format }}.patch"
-          path: "./tests/stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}.patch"
+          name: "python-${{ matrix.config.python }}-pybind-${{ matrix.config.pybind11-branch }}-${{ matrix.config.numpy-format }}-diagnostics"
+          path: tmp/pytest-artifacts/
           retention-days: 30
           if-no-files-found: ignore
-
-      - name: Check error generation
-        shell: bash
-        run: |
-          source .venv/bin/activate
-          ./tests/check-demo-errors-generation.sh "pybind11-${{ matrix.config.pybind11-branch }}"
 
   test-cli-options:
     name: "Runs on 🐍 ${{ matrix.python }} • ${{ matrix.test-package }}"

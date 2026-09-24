@@ -16,9 +16,12 @@ def pytest_addoption(parser):
 
 @pytest.fixture
 def demo_case(pytestconfig):
-    return make_case(Path(__file__).resolve().parents[1], sys.version_info[:2],
-                     pytestconfig.getoption("pybind11_branch"),
-                     pytestconfig.getoption("numpy_format"))
+    return make_case(
+        Path(__file__).resolve().parents[1],
+        sys.version_info[:2],
+        pytestconfig.getoption("pybind11_branch"),
+        pytestconfig.getoption("numpy_format"),
+    )
 
 
 @pytest.fixture
@@ -39,4 +42,5 @@ def report_update(pytestconfig):
             print(message)
         else:
             terminal.write_line(message)
+
     return report

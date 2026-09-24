@@ -102,17 +102,27 @@ def test_check_update_preserve_aliases_unrelated_files_and_index(tmp_path, updat
 
 def test_stderr_update_is_scoped_to_one_file(tmp_path):
     write_files(tmp_path / "case", {"stderr.txt": b"old", "unrelated.txt": b"keep"})
-    h.check_snapshot(tmp_path, Path("case"), {"stderr.txt": b"new"},
-                     update=True, only=frozenset({"stderr.txt"}))
+    h.check_snapshot(
+        tmp_path,
+        Path("case"),
+        {"stderr.txt": b"new"},
+        update=True,
+        only=frozenset({"stderr.txt"}),
+    )
     assert h.read_tree(tmp_path / "case") == {
-        "stderr.txt": b"new", "unrelated.txt": b"keep",
+        "stderr.txt": b"new",
+        "unrelated.txt": b"keep",
     }
 
 
-@pytest.mark.parametrize("actual", [
-    {"../escape": b"bad"}, {"x": b"file", "x/child": b"collision"},
-    {"x": "not bytes"},
-])
+@pytest.mark.parametrize(
+    "actual",
+    [
+        {"../escape": b"bad"},
+        {"x": b"file", "x/child": b"collision"},
+        {"x": "not bytes"},
+    ],
+)
 def test_update_validates_all_content_before_writing(tmp_path, actual):
     write_files(tmp_path / "case", {"keep.pyi": b"original"})
     with pytest.raises(h.HarnessError):
@@ -136,7 +146,9 @@ def test_update_handles_file_directory_shape_changes(tmp_path):
 
 
 @pytest.mark.parametrize("error_number", [errno.EACCES, errno.EPERM, errno.EIO])
-def test_update_propagates_directory_cleanup_failures(tmp_path, monkeypatch, error_number):
+def test_update_propagates_directory_cleanup_failures(
+    tmp_path, monkeypatch, error_number
+):
     write_files(tmp_path / "case", {"keep.pyi": b"old"})
     blocked = tmp_path / "case/empty"
     blocked.mkdir()
@@ -168,7 +180,10 @@ def test_update_preserves_nonempty_directories(tmp_path, monkeypatch, error_numb
 
     monkeypatch.setattr(Path, "rmdir", nonempty_rmdir)
     assert h.check_snapshot(
-        tmp_path, Path("case"), {"nested/keep.pyi": b"new"}, update=True,
+        tmp_path,
+        Path("case"),
+        {"nested/keep.pyi": b"new"},
+        update=True,
     ) == ("nested/keep.pyi",)
     assert (retained / "keep.pyi").read_bytes() == b"new"
 
@@ -176,27 +191,45 @@ def test_update_preserves_nonempty_directories(tmp_path, monkeypatch, error_numb
 def test_scoped_update_rejects_extra_actual_files_before_writing(tmp_path):
     write_files(tmp_path / "case", {"stderr.txt": b"original", "unrelated": b"keep"})
     with pytest.raises(h.HarnessError, match="scope"):
-        h.check_snapshot(tmp_path, Path("case"), {"stderr.txt": b"new", "extra": b"bad"},
-                         update=True, only=frozenset({"stderr.txt"}))
-    assert h.read_tree(tmp_path / "case") == {"stderr.txt": b"original", "unrelated": b"keep"}
+        h.check_snapshot(
+            tmp_path,
+            Path("case"),
+            {"stderr.txt": b"new", "extra": b"bad"},
+            update=True,
+            only=frozenset({"stderr.txt"}),
+        )
+    assert h.read_tree(tmp_path / "case") == {
+        "stderr.txt": b"original",
+        "unrelated": b"keep",
+    }
 
 
 @pytest.mark.parametrize("status", [0, 1, 2, 127])
 def test_run_command_requires_exact_status_and_retains_logs(tmp_path, status):
-    command = [sys.executable, "-c", f"import sys; print('diagnostic', file=sys.stderr); sys.exit({status})"]
+    command = [
+        sys.executable,
+        "-c",
+        f"import sys; print('diagnostic', file=sys.stderr); sys.exit({status})",
+    ]
     if status == 1:
-        result = h.run_command(command, cwd=tmp_path, log=tmp_path / "process", expected_status=1)
+        result = h.run_command(
+            command, cwd=tmp_path, log=tmp_path / "process", expected_status=1
+        )
         assert result.returncode == 1
     else:
         with pytest.raises(h.HarnessError, match="expected 1"):
-            h.run_command(command, cwd=tmp_path, log=tmp_path / "process", expected_status=1)
+            h.run_command(
+                command, cwd=tmp_path, log=tmp_path / "process", expected_status=1
+            )
     assert b"diagnostic" in (tmp_path / "process.stderr").read_bytes()
     assert json.loads((tmp_path / "process.json").read_text())["returncode"] == status
 
 
 def test_missing_command_and_timeout_are_diagnostic(tmp_path, monkeypatch):
     with pytest.raises(h.HarnessError):
-        h.run_command([str(tmp_path / "missing-command")], cwd=tmp_path, log=tmp_path / "missing")
+        h.run_command(
+            [str(tmp_path / "missing-command")], cwd=tmp_path, log=tmp_path / "missing"
+        )
     assert (tmp_path / "missing.json").is_file()
 
     def timeout(argv, **kwargs):
@@ -210,13 +243,20 @@ def test_missing_command_and_timeout_are_diagnostic(tmp_path, monkeypatch):
     assert (tmp_path / "timeout.stderr").read_bytes() == b"stuck"
 
 
-@pytest.mark.parametrize("status,stderr,files", [
-    (0, b"Terminating due to previous errors", {}),
-    (2, b"Terminating due to previous errors", {}),
-    (1, b"Traceback (most recent call last):\nTerminating due to previous errors", {}),
-    (1, b"unrelated failure", {}),
-    (1, b"Terminating due to previous errors", {"unexpected.pyi": b"x"}),
-])
+@pytest.mark.parametrize(
+    "status,stderr,files",
+    [
+        (0, b"Terminating due to previous errors", {}),
+        (2, b"Terminating due to previous errors", {}),
+        (
+            1,
+            b"Traceback (most recent call last):\nTerminating due to previous errors",
+            {},
+        ),
+        (1, b"unrelated failure", {}),
+        (1, b"Terminating due to previous errors", {"unexpected.pyi": b"x"}),
+    ],
+)
 def test_invalid_fatal_error_runs_are_rejected(tmp_path, status, stderr, files):
     write_files(tmp_path / "output", files)
     result = subprocess.CompletedProcess(["stubgen"], status, b"", stderr)
@@ -230,18 +270,24 @@ def test_error_normalization_is_narrow(tmp_path):
     assert h.validate_error_run(result, tmp_path / "absent") == (
         b"object at 0x1234abcd5678\nTerminating due to previous errors\n"
     )
-    assert h.normalize_stderr(b"ordinary text 123 abc 0xZZ") == b"ordinary text 123 abc 0xZZ"
+    assert (
+        h.normalize_stderr(b"ordinary text 123 abc 0xZZ")
+        == b"ordinary text 123 abc 0xZZ"
+    )
 
 
 def test_ruff_pin_configuration_target_order_and_cache_policy(tmp_path, monkeypatch):
     repo = tmp_path / "repo"
-    write_files(repo, {
-        ".pre-commit-config.yaml": (
-            b"repos:\n  - repo: unrelated\n    rev: v99.0.0\n"
-            b"  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.20\n"
-        ),
-        "pyproject.toml": b"[tool.ruff]\nline-length = 88\n",
-    })
+    write_files(
+        repo,
+        {
+            ".pre-commit-config.yaml": (
+                b"repos:\n  - repo: unrelated\n    rev: v99.0.0\n"
+                b"  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.20\n"
+            ),
+            "pyproject.toml": b"[tool.ruff]\nline-length = 88\n",
+        },
+    )
     commands = []
 
     def record(argv, **kwargs):
@@ -264,9 +310,14 @@ def test_invalid_ruff_pin_and_formatter_failure_are_not_ignored(tmp_path, monkey
     write_files(tmp_path, {".pre-commit-config.yaml": b"repos: []\n"})
     with pytest.raises(h.HarnessError, match="Ruff"):
         h.ruff_version(tmp_path)
-    write_files(tmp_path, {".pre-commit-config.yaml": (
-        b"repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.20\n"
-    )})
+    write_files(
+        tmp_path,
+        {
+            ".pre-commit-config.yaml": (
+                b"repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.20\n"
+            )
+        },
+    )
 
     def fail(argv, **kwargs):
         raise h.HarnessError("formatter failed")
@@ -286,9 +337,14 @@ def test_artifacts_cannot_target_reference_trees(tmp_path, through_alias):
         alias.symlink_to(refs, target_is_directory=True)
         destination = alias / "artifacts"
     with pytest.raises(h.HarnessError, match="reference"):
-        with h.diagnostics(tmp_path / "work", artifacts=destination,
-                           reference_roots=(refs,), case_id="case", check_name="stubs",
-                           expected=refs / "case"):
+        with h.diagnostics(
+            tmp_path / "work",
+            artifacts=destination,
+            reference_roots=(refs,),
+            case_id="case",
+            check_name="stubs",
+            expected=refs / "case",
+        ):
             raise AssertionError("body must not run")
     assert h.read_tree(refs) == {"case/x.pyi": b"keep"}
 
@@ -298,9 +354,14 @@ def test_failure_artifacts_include_output_diff_and_context(tmp_path):
     refs = tmp_path / "refs"
     write_files(refs / "case", {"x.pyi": b"expected"})
     with pytest.raises(h.HarnessError, match="Artifacts:"):
-        with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
-                           reference_roots=(refs,), case_id="case", check_name="stubs",
-                           expected=refs / "case"):
+        with h.diagnostics(
+            workspace,
+            artifacts=tmp_path / "artifacts",
+            reference_roots=(refs,),
+            case_id="case",
+            check_name="stubs",
+            expected=refs / "case",
+        ):
             write_files(workspace / "output", {"x.pyi": b"actual"})
             raise h.SnapshotMismatch("Changed: x.pyi\n")
     runs = list((tmp_path / "artifacts/case/stubs").iterdir())
@@ -313,32 +374,50 @@ def test_failure_artifacts_include_output_diff_and_context(tmp_path):
 
 def test_artifacts_cannot_recurse_into_workspace(tmp_path):
     with pytest.raises(h.HarnessError, match="workspace"):
-        with h.diagnostics(tmp_path, artifacts=tmp_path / "artifacts",
-                           reference_roots=(tmp_path / "refs",), case_id="case",
-                           check_name="stubs", expected=tmp_path / "refs/case"):
+        with h.diagnostics(
+            tmp_path,
+            artifacts=tmp_path / "artifacts",
+            reference_roots=(tmp_path / "refs",),
+            case_id="case",
+            check_name="stubs",
+            expected=tmp_path / "refs/case",
+        ):
             raise AssertionError("body must not run")
 
 
 @pytest.mark.parametrize("component", ["case_id", "check_name"])
 @pytest.mark.parametrize("value", ["", "..", "../escape", "/absolute", "nested/name"])
-def test_diagnostics_rejects_invalid_identifiers_before_writing(tmp_path, component, value):
+def test_diagnostics_rejects_invalid_identifiers_before_writing(
+    tmp_path, component, value
+):
     identifiers = {"case_id": "case", "check_name": "stubs", component: value}
     with pytest.raises(h.HarnessError):
-        with h.diagnostics(tmp_path / "work", artifacts=tmp_path / "artifacts",
-                           reference_roots=(tmp_path / "refs",),
-                           expected=tmp_path / "refs/case", **identifiers):
+        with h.diagnostics(
+            tmp_path / "work",
+            artifacts=tmp_path / "artifacts",
+            reference_roots=(tmp_path / "refs",),
+            expected=tmp_path / "refs/case",
+            **identifiers,
+        ):
             pytest.fail("body must not run")
     assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize("artifacts_enabled", [False, True])
-def test_success_records_context_without_retaining_artifacts(tmp_path, artifacts_enabled):
+def test_success_records_context_without_retaining_artifacts(
+    tmp_path, artifacts_enabled
+):
     workspace = tmp_path / "work"
     artifacts = tmp_path / "artifacts"
     expected = tmp_path / "refs/case"
-    with h.diagnostics(workspace, artifacts=artifacts if artifacts_enabled else None,
-                       reference_roots=(tmp_path / "refs",), case_id="case",
-                       check_name="stubs", expected=expected):
+    with h.diagnostics(
+        workspace,
+        artifacts=artifacts if artifacts_enabled else None,
+        reference_roots=(tmp_path / "refs",),
+        case_id="case",
+        check_name="stubs",
+        expected=expected,
+    ):
         assert (workspace / "context.txt").read_text() == (
             f"Case: case/stubs\nReference: {expected}\nWorkspace: {workspace}\n"
         )
@@ -351,9 +430,14 @@ def test_failure_without_artifacts_preserves_original_diagnostics(tmp_path):
     workspace = tmp_path / "work"
     expected = tmp_path / "refs/case"
     with pytest.raises(h.HarnessError) as failure:
-        with h.diagnostics(workspace, artifacts=None,
-                           reference_roots=(tmp_path / "refs",), case_id="case",
-                           check_name="stubs", expected=expected):
+        with h.diagnostics(
+            workspace,
+            artifacts=None,
+            reference_roots=(tmp_path / "refs",),
+            case_id="case",
+            check_name="stubs",
+            expected=expected,
+        ):
             raise error
     summary = str(failure.value)
     assert failure.value.__cause__ is error
@@ -370,9 +454,14 @@ def test_failure_artifacts_are_unique_and_skip_symlinks_and_special_files(tmp_pa
     for index in range(2):
         workspace = tmp_path / f"work-{index}"
         with pytest.raises(h.HarnessError, match="rejected output"):
-            with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
-                               reference_roots=(refs,), case_id="case", check_name="stubs",
-                               expected=refs / "case"):
+            with h.diagnostics(
+                workspace,
+                artifacts=tmp_path / "artifacts",
+                reference_roots=(refs,),
+                case_id="case",
+                check_name="stubs",
+                expected=refs / "case",
+            ):
                 write_files(workspace / "output", {"x.pyi": str(index).encode()})
                 (workspace / "linked.pyi").symlink_to(refs / "case/x.pyi")
                 (workspace / "linked-dir").symlink_to(refs, target_is_directory=True)
@@ -389,7 +478,9 @@ def test_failure_artifacts_are_unique_and_skip_symlinks_and_special_files(tmp_pa
 
 @pytest.mark.parametrize("relation", ["inside", "same", "ancestor"])
 @pytest.mark.parametrize("through_alias", [False, True])
-def test_diagnostics_rejects_reference_overlapping_workspaces(tmp_path, relation, through_alias):
+def test_diagnostics_rejects_reference_overlapping_workspaces(
+    tmp_path, relation, through_alias
+):
     refs = tmp_path / "refs"
     write_files(refs / "case", {"x.pyi": b"keep"})
     workspace = {"inside": refs / "work", "same": refs, "ancestor": tmp_path}[relation]
@@ -399,8 +490,14 @@ def test_diagnostics_rejects_reference_overlapping_workspaces(tmp_path, relation
         workspace = alias
     body_ran = False
     with pytest.raises(h.HarnessError) as failure:
-        with h.diagnostics(workspace, artifacts=None, reference_roots=(refs,),
-                           case_id="case", check_name="stubs", expected=refs / "case"):
+        with h.diagnostics(
+            workspace,
+            artifacts=None,
+            reference_roots=(refs,),
+            case_id="case",
+            check_name="stubs",
+            expected=refs / "case",
+        ):
             body_ran = True
             raise h.SnapshotMismatch("Changed: x.pyi\n")
     assert h.read_tree(refs) == {"case/x.pyi": b"keep"}
@@ -418,9 +515,14 @@ def test_diagnostic_writes_do_not_follow_reference_symlinks(tmp_path, name):
         (workspace / name).symlink_to(refs / "case/x.pyi")
     error = h.SnapshotMismatch("Changed: x.pyi\n")
     with pytest.raises(h.HarnessError) as failure:
-        with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
-                           reference_roots=(refs,), case_id="case", check_name="stubs",
-                           expected=refs / "case"):
+        with h.diagnostics(
+            workspace,
+            artifacts=tmp_path / "artifacts",
+            reference_roots=(refs,),
+            case_id="case",
+            check_name="stubs",
+            expected=refs / "case",
+        ):
             if name != "context.txt":
                 (workspace / name).symlink_to(refs / "case/x.pyi")
             raise error
@@ -439,9 +541,14 @@ def test_diagnostic_write_errors_preserve_context(tmp_path, name):
     error = h.SnapshotMismatch("Changed: x.pyi\n")
     body_ran = False
     with pytest.raises(h.HarnessError) as failure:
-        with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
-                           reference_roots=(tmp_path / "refs",), case_id="case",
-                           check_name="stubs", expected=expected):
+        with h.diagnostics(
+            workspace,
+            artifacts=tmp_path / "artifacts",
+            reference_roots=(tmp_path / "refs",),
+            case_id="case",
+            check_name="stubs",
+            expected=expected,
+        ):
             body_ran = True
             raise error
     summary = str(failure.value)
@@ -465,9 +572,14 @@ def test_artifact_retention_errors_preserve_original_failure_and_locations(tmp_p
     expected = tmp_path / "refs/case"
     error = h.SnapshotMismatch("Changed: x.pyi\n")
     with pytest.raises(h.HarnessError) as failure:
-        with h.diagnostics(workspace, artifacts=artifacts,
-                           reference_roots=(tmp_path / "refs",), case_id="case",
-                           check_name="stubs", expected=expected):
+        with h.diagnostics(
+            workspace,
+            artifacts=artifacts,
+            reference_roots=(tmp_path / "refs",),
+            case_id="case",
+            check_name="stubs",
+            expected=expected,
+        ):
             raise error
     summary = str(failure.value)
     assert failure.value.__cause__ is error
@@ -479,8 +591,10 @@ def test_artifact_retention_errors_preserve_original_failure_and_locations(tmp_p
     assert artifacts.read_bytes() == b"not a directory"
 
 
-@pytest.mark.parametrize("branch,mode", [(None, None), ("v9.9", "numpy-array-use-type-var"),
-                                         ("v3.0", "invalid-format")])
+@pytest.mark.parametrize(
+    "branch,mode",
+    [(None, None), ("v9.9", "numpy-array-use-type-var"), ("v3.0", "invalid-format")],
+)
 def test_case_requires_explicit_recognized_configuration(tmp_path, branch, mode):
     with pytest.raises(h.HarnessError):
         h.make_case(tmp_path, (3, 13), branch, mode)
@@ -499,7 +613,9 @@ def test_case_requires_existing_profiles_and_uses_runtime_python(tmp_path):
 
 
 @pytest.mark.parametrize("failure_stage", ["generator", "formatter"])
-def test_success_update_never_accepts_failed_generation_or_formatting(tmp_path, monkeypatch, failure_stage):
+def test_success_update_never_accepts_failed_generation_or_formatting(
+    tmp_path, monkeypatch, failure_stage
+):
     import test_demo_stubs as integration
 
     repo = tmp_path / "repo"
@@ -522,7 +638,9 @@ def test_success_update_never_accepts_failed_generation_or_formatting(tmp_path, 
     monkeypatch.setattr(integration, "run_command", generate)
     monkeypatch.setattr(integration, "format_stubs", format_failure)
     with pytest.raises(h.HarnessError, match=f"{failure_stage} failed"):
-        integration.test_demo_stubs(case, tmp_path / "work", True, None, messages.append)
+        integration.test_demo_stubs(
+            case, tmp_path / "work", True, None, messages.append
+        )
     assert h.read_tree(reference) == {"demo/__init__.pyi": b"original"}
     assert messages == []
 
@@ -537,7 +655,9 @@ def test_error_update_rejects_traceback_even_with_exit_one(tmp_path, monkeypatch
     def traceback_result(argv, **kwargs):
         assert argv[:4] == [sys.executable, "-I", "-m", "pybind11_stubgen"]
         assert kwargs["expected_status"] == 1
-        return subprocess.CompletedProcess(argv, 1, b"", b"Traceback (most recent call last):\n")
+        return subprocess.CompletedProcess(
+            argv, 1, b"", b"Traceback (most recent call last):\n"
+        )
 
     monkeypatch.setattr(integration, "run_command", traceback_result)
     with pytest.raises(h.HarnessError, match="traceback"):
@@ -547,16 +667,30 @@ def test_error_update_rejects_traceback_even_with_exit_one(tmp_path, monkeypatch
 
 @pytest.mark.parametrize("kind", ["stubs", "errors"])
 @pytest.mark.parametrize("update", [False, True])
-def test_integration_check_and_update_paths_with_synthetic_output(tmp_path, monkeypatch, kind, update):
+def test_integration_check_and_update_paths_with_synthetic_output(
+    tmp_path, monkeypatch, kind, update
+):
     import test_demo_errors
     import test_demo_stubs
 
-    case = h.DemoCase(tmp_path / "repo", (3, 13), "v3.0", "numpy-array-wrap-with-annotated")
+    case = h.DemoCase(
+        tmp_path / "repo", (3, 13), "v3.0", "numpy-array-wrap-with-annotated"
+    )
     integration = test_demo_stubs if kind == "stubs" else test_demo_errors
-    run_test = integration.test_demo_stubs if kind == "stubs" else integration.test_demo_errors
-    reference = case.stubs_root / case.stub_profile if kind == "stubs" else case.errors_root / case.error_profile
+    run_test = (
+        integration.test_demo_stubs if kind == "stubs" else integration.test_demo_errors
+    )
+    reference = (
+        case.stubs_root / case.stub_profile
+        if kind == "stubs"
+        else case.errors_root / case.error_profile
+    )
     filename = "demo/__init__.pyi" if kind == "stubs" else "demo.errors.stderr.txt"
-    new_content = b"new stubs\n" if kind == "stubs" else b"object 0x1234abcd5678\nTerminating due to previous errors\n"
+    new_content = (
+        b"new stubs\n"
+        if kind == "stubs"
+        else b"object 0x1234abcd5678\nTerminating due to previous errors\n"
+    )
     write_files(reference, {filename: b"original"})
     messages = []
 
@@ -564,7 +698,9 @@ def test_integration_check_and_update_paths_with_synthetic_output(tmp_path, monk
         if kind == "stubs":
             write_files(kwargs["cwd"] / "output", {filename: new_content})
             return subprocess.CompletedProcess(argv, 0, b"", b"")
-        return subprocess.CompletedProcess(argv, 1, b"", b"object 0xABCD\nTerminating due to previous errors\n")
+        return subprocess.CompletedProcess(
+            argv, 1, b"", b"object 0xABCD\nTerminating due to previous errors\n"
+        )
 
     monkeypatch.setattr(integration, "run_command", generate)
     if kind == "stubs":
@@ -584,7 +720,9 @@ def test_integration_check_and_update_paths_with_synthetic_output(tmp_path, monk
 def test_empty_output_cannot_erase_references(tmp_path, monkeypatch, empty_at):
     import test_demo_stubs as integration
 
-    case = h.DemoCase(tmp_path / "repo", (3, 13), "v3.0", "numpy-array-wrap-with-annotated")
+    case = h.DemoCase(
+        tmp_path / "repo", (3, 13), "v3.0", "numpy-array-wrap-with-annotated"
+    )
     reference = case.stubs_root / case.stub_profile
     write_files(reference, {"demo/__init__.pyi": b"original"})
 
@@ -601,3 +739,18 @@ def test_empty_output_cannot_erase_references(tmp_path, monkeypatch, empty_at):
     with pytest.raises(h.HarnessError, match="demo/__init__.pyi"):
         integration.test_demo_stubs(case, tmp_path / "work", True, None, print)
     assert h.read_tree(reference) == {"demo/__init__.pyi": b"original"}
+
+
+def test_entry_points_use_pytest_without_legacy_mutating_checks():
+    repo = Path(__file__).resolve().parents[1]
+    tox = (repo / "tox.ini").read_text()
+    ci = (repo / ".github/workflows/ci.yml").read_text()
+    assert "-m pytest" in tox and "{posargs}" in tox
+    assert "pytest>=8,<9" in tox
+    assert "PYTHON_TAG_FILE" not in tox
+    native_job = ci.split("  tests:\n", 1)[1].split("  test-cli-options:\n", 1)[0]
+    assert "-m pytest" in native_job
+    assert "tmp/pytest-artifacts/" in native_job
+    assert "--update-snapshots" not in native_job
+    for script in ("check-demo-stubs-generation.sh", "check-demo-errors-generation.sh"):
+        assert script not in tox and script not in ci
