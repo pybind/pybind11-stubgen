@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,24 @@ def test_read_tree_preserves_bytes_and_rejects_links(tmp_path):
     (tmp_path / "linked.pyi").symlink_to("sub/a.pyi")
     with pytest.raises(h.HarnessError, match="symlink"):
         h.read_tree(tmp_path)
+
+
+@pytest.mark.parametrize("unreadable", [".", "sub"])
+def test_read_tree_reports_scan_errors(tmp_path, monkeypatch, unreadable):
+    write_files(tmp_path, {"sub/a.pyi": b"must not disappear\n"})
+    blocked = tmp_path / unreadable
+    scandir = os.scandir
+
+    def failing_scandir(path):
+        if Path(path) == blocked:
+            raise PermissionError("synthetic scan failure")
+        return scandir(path)
+
+    monkeypatch.setattr(os, "scandir", failing_scandir)
+    with pytest.raises(h.HarnessError) as failure:
+        h.read_tree(tmp_path)
+    assert str(blocked) in str(failure.value)
+    assert isinstance(failure.value.__cause__, PermissionError)
 
 
 def test_profile_aliases_resolve_but_escapes_and_missing_profiles_fail(tmp_path):

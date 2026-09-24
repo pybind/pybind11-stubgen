@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import os
 from pathlib import Path, PurePosixPath
 
 Snapshot = dict[str, bytes]
@@ -46,13 +47,23 @@ def read_tree(root: Path) -> Snapshot:
     if not root.is_dir():
         raise HarnessError(f"Expected directory: {root}")
     result = {}
-    for path in sorted(root.rglob("*")):
-        if path.is_symlink():
-            raise HarnessError(f"Unexpected symlink: {path}")
-        if path.is_file():
-            result[path.relative_to(root).as_posix()] = path.read_bytes()
-        elif not path.is_dir():
-            raise HarnessError(f"Unexpected filesystem entry: {path}")
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        try:
+            with os.scandir(directory) as entries:
+                paths = sorted(directory / entry.name for entry in entries)
+        except OSError as error:
+            raise HarnessError(f"Unable to scan directory: {directory}") from error
+        for path in paths:
+            if path.is_symlink():
+                raise HarnessError(f"Unexpected symlink: {path}")
+            if path.is_file():
+                result[path.relative_to(root).as_posix()] = path.read_bytes()
+            elif path.is_dir():
+                pending.append(path)
+            else:
+                raise HarnessError(f"Unexpected filesystem entry: {path}")
     return result
 
 
