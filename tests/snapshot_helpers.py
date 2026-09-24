@@ -5,7 +5,11 @@ import errno
 import json
 import os
 import re
+import shutil
 import subprocess
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
 Snapshot = dict[str, bytes]
@@ -213,3 +217,47 @@ def format_stubs(
     run_command(prefix + ["format"] + options, cwd=workspace, log=workspace / "ruff-format")
     run_command(prefix + ["check", "--select", "I,RUF022", "--fix"] + options,
                 cwd=workspace, log=workspace / "ruff-check")
+
+
+@contextmanager
+def diagnostics(
+    workspace: Path, *, artifacts: Path | None, reference_roots: tuple[Path, ...],
+    case_id: str, check_name: str, expected: Path,
+) -> Iterator[None]:
+    workspace = workspace.resolve()
+    artifact_parent = None
+    for component in (case_id, check_name):
+        if len(relative_file(component).parts) != 1:
+            raise HarnessError(f"Invalid artifact identifier: {component}")
+    if artifacts is not None:
+        base = artifacts.resolve()
+        artifact_parent = (base / case_id / check_name).resolve()
+        if not artifact_parent.is_relative_to(base):
+            raise HarnessError("Artifact identifiers escape their destination")
+        for candidate in (base, artifact_parent):
+            if any(candidate.is_relative_to(root.resolve()) for root in reference_roots):
+                raise HarnessError("Artifact destination is inside a reference tree")
+        if artifact_parent.is_relative_to(workspace):
+            raise HarnessError("Artifact destination is inside the working workspace")
+    workspace.mkdir(parents=True, exist_ok=True)
+    context = f"Case: {case_id}/{check_name}\nReference: {expected.resolve()}\nWorkspace: {workspace}\n"
+    (workspace / "context.txt").write_text(context, encoding="utf-8")
+    try:
+        yield
+    except Exception as error:
+        summary = context + str(error)
+        (workspace / "failure.txt").write_text(summary, encoding="utf-8")
+        if isinstance(error, SnapshotMismatch):
+            (workspace / "diff.patch").write_text(str(error), encoding="utf-8")
+        if artifact_parent is not None:
+            artifact_parent.mkdir(parents=True, exist_ok=True)
+            destination = Path(tempfile.mkdtemp(prefix="run-", dir=artifact_parent))
+            for source in workspace.rglob("*"):
+                # Never dereference rejected output symlinks while retaining diagnostics.
+                if source.is_symlink() or not source.is_file():
+                    continue
+                target = destination / source.relative_to(workspace)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+            summary += f"\nArtifacts: {destination}"
+        raise HarnessError(summary) from error

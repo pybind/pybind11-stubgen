@@ -274,3 +274,114 @@ def test_invalid_ruff_pin_and_formatter_failure_are_not_ignored(tmp_path, monkey
     monkeypatch.setattr(h, "run_command", fail)
     with pytest.raises(h.HarnessError, match="formatter failed"):
         h.format_stubs(tmp_path / "output", tmp_path, tmp_path, (3, 10))
+
+
+@pytest.mark.parametrize("through_alias", [False, True])
+def test_artifacts_cannot_target_reference_trees(tmp_path, through_alias):
+    refs = tmp_path / "refs"
+    write_files(refs / "case", {"x.pyi": b"keep"})
+    destination = refs / "artifacts"
+    if through_alias:
+        alias = tmp_path / "alias"
+        alias.symlink_to(refs, target_is_directory=True)
+        destination = alias / "artifacts"
+    with pytest.raises(h.HarnessError, match="reference"):
+        with h.diagnostics(tmp_path / "work", artifacts=destination,
+                           reference_roots=(refs,), case_id="case", check_name="stubs",
+                           expected=refs / "case"):
+            raise AssertionError("body must not run")
+    assert h.read_tree(refs) == {"case/x.pyi": b"keep"}
+
+
+def test_failure_artifacts_include_output_diff_and_context(tmp_path):
+    workspace = tmp_path / "work"
+    refs = tmp_path / "refs"
+    write_files(refs / "case", {"x.pyi": b"expected"})
+    with pytest.raises(h.HarnessError, match="Artifacts:"):
+        with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
+                           reference_roots=(refs,), case_id="case", check_name="stubs",
+                           expected=refs / "case"):
+            write_files(workspace / "output", {"x.pyi": b"actual"})
+            raise h.SnapshotMismatch("Changed: x.pyi\n")
+    runs = list((tmp_path / "artifacts/case/stubs").iterdir())
+    assert len(runs) == 1
+    assert (runs[0] / "output/x.pyi").read_bytes() == b"actual"
+    assert "Changed: x.pyi" in (runs[0] / "diff.patch").read_text()
+    assert str(refs / "case") in (runs[0] / "context.txt").read_text()
+    assert h.read_tree(refs) == {"case/x.pyi": b"expected"}
+
+
+def test_artifacts_cannot_recurse_into_workspace(tmp_path):
+    with pytest.raises(h.HarnessError, match="workspace"):
+        with h.diagnostics(tmp_path, artifacts=tmp_path / "artifacts",
+                           reference_roots=(tmp_path / "refs",), case_id="case",
+                           check_name="stubs", expected=tmp_path / "refs/case"):
+            raise AssertionError("body must not run")
+
+
+@pytest.mark.parametrize("component", ["case_id", "check_name"])
+@pytest.mark.parametrize("value", ["", "..", "../escape", "/absolute", "nested/name"])
+def test_diagnostics_rejects_invalid_identifiers_before_writing(tmp_path, component, value):
+    identifiers = {"case_id": "case", "check_name": "stubs", component: value}
+    with pytest.raises(h.HarnessError):
+        with h.diagnostics(tmp_path / "work", artifacts=tmp_path / "artifacts",
+                           reference_roots=(tmp_path / "refs",),
+                           expected=tmp_path / "refs/case", **identifiers):
+            pytest.fail("body must not run")
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("artifacts_enabled", [False, True])
+def test_success_records_context_without_retaining_artifacts(tmp_path, artifacts_enabled):
+    workspace = tmp_path / "work"
+    artifacts = tmp_path / "artifacts"
+    expected = tmp_path / "refs/case"
+    with h.diagnostics(workspace, artifacts=artifacts if artifacts_enabled else None,
+                       reference_roots=(tmp_path / "refs",), case_id="case",
+                       check_name="stubs", expected=expected):
+        assert (workspace / "context.txt").read_text() == (
+            f"Case: case/stubs\nReference: {expected}\nWorkspace: {workspace}\n"
+        )
+    assert not artifacts.exists()
+    assert not (workspace / "failure.txt").exists()
+
+
+def test_failure_without_artifacts_preserves_original_diagnostics(tmp_path):
+    error = RuntimeError("generation failed")
+    workspace = tmp_path / "work"
+    expected = tmp_path / "refs/case"
+    with pytest.raises(h.HarnessError) as failure:
+        with h.diagnostics(workspace, artifacts=None,
+                           reference_roots=(tmp_path / "refs",), case_id="case",
+                           check_name="stubs", expected=expected):
+            raise error
+    summary = str(failure.value)
+    assert failure.value.__cause__ is error
+    assert "generation failed" in summary
+    assert str(workspace) in summary and str(expected) in summary
+    assert "Artifacts:" not in summary
+    assert (workspace / "failure.txt").read_text() == summary
+    assert not (workspace / "diff.patch").exists()
+
+
+def test_failure_artifacts_are_unique_and_skip_symlinks_and_special_files(tmp_path):
+    refs = tmp_path / "refs"
+    write_files(refs / "case", {"x.pyi": b"keep"})
+    for index in range(2):
+        workspace = tmp_path / f"work-{index}"
+        with pytest.raises(h.HarnessError, match="rejected output"):
+            with h.diagnostics(workspace, artifacts=tmp_path / "artifacts",
+                               reference_roots=(refs,), case_id="case", check_name="stubs",
+                               expected=refs / "case"):
+                write_files(workspace / "output", {"x.pyi": str(index).encode()})
+                (workspace / "linked.pyi").symlink_to(refs / "case/x.pyi")
+                (workspace / "linked-dir").symlink_to(refs, target_is_directory=True)
+                (workspace / "broken").symlink_to(tmp_path / "absent")
+                os.mkfifo(workspace / "fifo")
+                raise h.HarnessError("rejected output")
+    runs = list((tmp_path / "artifacts/case/stubs").iterdir())
+    assert len(runs) == 2
+    assert {(run / "output/x.pyi").read_bytes() for run in runs} == {b"0", b"1"}
+    for run in runs:
+        assert set(h.read_tree(run)) == {"output/x.pyi", "context.txt", "failure.txt"}
+    assert h.read_tree(refs) == {"case/x.pyi": b"keep"}
