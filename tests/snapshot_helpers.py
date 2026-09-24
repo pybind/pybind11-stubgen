@@ -81,3 +81,56 @@ def diff_tree(expected: Snapshot, actual: Snapshot) -> str:
             fromfile=f"expected/{name}", tofile=f"actual/{name}",
         ))
     return "".join(differences)
+
+
+class SnapshotMismatch(HarnessError):
+    """Generated output differs from its reference."""
+
+
+def check_snapshot(
+    root: Path, profile: Path, actual: Snapshot, *,
+    update: bool = False, only: frozenset[str] | None = None,
+) -> tuple[str, ...]:
+    for name, content in actual.items():
+        path = relative_file(name)
+        if not isinstance(content, bytes):
+            raise HarnessError(f"Snapshot content must be bytes: {name}")
+        if any(parent.as_posix() in actual for parent in path.parents):
+            raise HarnessError(f"Conflicting snapshot paths: {name}")
+    if only is not None:
+        for name in only:
+            relative_file(name)
+        if actual.keys() - only:
+            raise HarnessError("Actual output exceeds the selected snapshot scope")
+    destination = resolve_profile(root, profile)
+    expected = read_tree(destination)
+    if only is not None:
+        for name in only:
+            target = destination / relative_file(name)
+            if target.exists() and not target.is_file():
+                raise HarnessError(f"Scoped reference is not a file: {target}")
+        expected = {name: content for name, content in expected.items() if name in only}
+    difference = diff_tree(expected, actual)
+    if not difference:
+        return ()
+    if not update:
+        raise SnapshotMismatch(difference)
+    changed = tuple(sorted(
+        name for name in expected.keys() | actual.keys()
+        if name not in expected or name not in actual or expected[name] != actual[name]
+    ))
+    for name in expected.keys() - actual.keys():
+        (destination / relative_file(name)).unlink()
+    if only is None:
+        directories = [path for path in destination.rglob("*") if path.is_dir()]
+        for directory in sorted(directories, key=lambda path: len(path.parts), reverse=True):
+            try:
+                directory.rmdir()
+            except OSError:
+                # Nonempty directories contain retained reference files.
+                continue
+    for name, content in actual.items():
+        target = destination / relative_file(name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+    return changed
