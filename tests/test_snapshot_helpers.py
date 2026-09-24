@@ -477,3 +477,127 @@ def test_artifact_retention_errors_preserve_original_failure_and_locations(tmp_p
     assert str(artifacts / "case/stubs") in summary
     assert "Changed: x.pyi" in (workspace / "failure.txt").read_text()
     assert artifacts.read_bytes() == b"not a directory"
+
+
+@pytest.mark.parametrize("branch,mode", [(None, None), ("v9.9", "numpy-array-use-type-var"),
+                                         ("v3.0", "invalid-format")])
+def test_case_requires_explicit_recognized_configuration(tmp_path, branch, mode):
+    with pytest.raises(h.HarnessError):
+        h.make_case(tmp_path, (3, 13), branch, mode)
+
+
+def test_case_requires_existing_profiles_and_uses_runtime_python(tmp_path):
+    mode = "numpy-array-wrap-with-annotated"
+    with pytest.raises(h.HarnessError):
+        h.make_case(tmp_path, (3, 13), "v3.0", mode)
+    write_files(tmp_path / "tests/stubs/python-3.13/pybind11-v3.0" / mode, {})
+    write_files(tmp_path / "tests/errors/pybind11-v3.0", {})
+    case = h.make_case(tmp_path, (3, 13), "v3.0", mode)
+    assert case.stub_profile == Path("python-3.13/pybind11-v3.0") / mode
+    assert case.error_profile == Path("pybind11-v3.0")
+    assert "python-3.13" in case.id
+
+
+@pytest.mark.parametrize("failure_stage", ["generator", "formatter"])
+def test_success_update_never_accepts_failed_generation_or_formatting(tmp_path, monkeypatch, failure_stage):
+    import test_demo_stubs as integration
+
+    repo = tmp_path / "repo"
+    case = h.DemoCase(repo, (3, 13), "v3.0", "numpy-array-wrap-with-annotated")
+    reference = case.stubs_root / case.stub_profile
+    write_files(reference, {"demo/__init__.pyi": b"original"})
+    messages = []
+
+    def generate(argv, **kwargs):
+        assert argv[:4] == [sys.executable, "-I", "-m", "pybind11_stubgen"]
+        assert kwargs["expected_status"] == 0
+        if failure_stage == "generator":
+            raise h.HarnessError("generator failed")
+        write_files(kwargs["cwd"] / "output", {"demo/__init__.pyi": b"new"})
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+    def format_failure(*args):
+        raise h.HarnessError("formatter failed")
+
+    monkeypatch.setattr(integration, "run_command", generate)
+    monkeypatch.setattr(integration, "format_stubs", format_failure)
+    with pytest.raises(h.HarnessError, match=f"{failure_stage} failed"):
+        integration.test_demo_stubs(case, tmp_path / "work", True, None, messages.append)
+    assert h.read_tree(reference) == {"demo/__init__.pyi": b"original"}
+    assert messages == []
+
+
+def test_error_update_rejects_traceback_even_with_exit_one(tmp_path, monkeypatch):
+    import test_demo_errors as integration
+
+    case = h.DemoCase(tmp_path / "repo", (3, 13), "v3.0", "numpy-array-use-type-var")
+    reference = case.errors_root / case.error_profile
+    write_files(reference, {"demo.errors.stderr.txt": b"original"})
+
+    def traceback_result(argv, **kwargs):
+        assert argv[:4] == [sys.executable, "-I", "-m", "pybind11_stubgen"]
+        assert kwargs["expected_status"] == 1
+        return subprocess.CompletedProcess(argv, 1, b"", b"Traceback (most recent call last):\n")
+
+    monkeypatch.setattr(integration, "run_command", traceback_result)
+    with pytest.raises(h.HarnessError, match="traceback"):
+        integration.test_demo_errors(case, tmp_path / "work", True, None, print)
+    assert h.read_tree(reference) == {"demo.errors.stderr.txt": b"original"}
+
+
+@pytest.mark.parametrize("kind", ["stubs", "errors"])
+@pytest.mark.parametrize("update", [False, True])
+def test_integration_check_and_update_paths_with_synthetic_output(tmp_path, monkeypatch, kind, update):
+    import test_demo_errors
+    import test_demo_stubs
+
+    case = h.DemoCase(tmp_path / "repo", (3, 13), "v3.0", "numpy-array-wrap-with-annotated")
+    integration = test_demo_stubs if kind == "stubs" else test_demo_errors
+    run_test = integration.test_demo_stubs if kind == "stubs" else integration.test_demo_errors
+    reference = case.stubs_root / case.stub_profile if kind == "stubs" else case.errors_root / case.error_profile
+    filename = "demo/__init__.pyi" if kind == "stubs" else "demo.errors.stderr.txt"
+    new_content = b"new stubs\n" if kind == "stubs" else b"object 0x1234abcd5678\nTerminating due to previous errors\n"
+    write_files(reference, {filename: b"original"})
+    messages = []
+
+    def generate(argv, **kwargs):
+        if kind == "stubs":
+            write_files(kwargs["cwd"] / "output", {filename: new_content})
+            return subprocess.CompletedProcess(argv, 0, b"", b"")
+        return subprocess.CompletedProcess(argv, 1, b"", b"object 0xABCD\nTerminating due to previous errors\n")
+
+    monkeypatch.setattr(integration, "run_command", generate)
+    if kind == "stubs":
+        monkeypatch.setattr(integration, "format_stubs", lambda *args: None)
+    if update:
+        run_test(case, tmp_path / "work", True, None, messages.append)
+        assert h.read_tree(reference) == {filename: new_content}
+        assert messages and str(reference.resolve()) in messages[0]
+    else:
+        with pytest.raises(h.HarnessError, match="Changed:"):
+            run_test(case, tmp_path / "work", False, None, messages.append)
+        assert h.read_tree(reference) == {filename: b"original"}
+        assert messages == []
+
+
+@pytest.mark.parametrize("empty_at", ["generator", "formatter"])
+def test_empty_output_cannot_erase_references(tmp_path, monkeypatch, empty_at):
+    import test_demo_stubs as integration
+
+    case = h.DemoCase(tmp_path / "repo", (3, 13), "v3.0", "numpy-array-wrap-with-annotated")
+    reference = case.stubs_root / case.stub_profile
+    write_files(reference, {"demo/__init__.pyi": b"original"})
+
+    def generate(argv, **kwargs):
+        if empty_at == "formatter":
+            write_files(kwargs["cwd"] / "output", {"demo/__init__.pyi": b"new"})
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+    def erase_output(output, repo, workspace, python_version):
+        (output / "demo/__init__.pyi").unlink()
+
+    monkeypatch.setattr(integration, "run_command", generate)
+    monkeypatch.setattr(integration, "format_stubs", erase_output)
+    with pytest.raises(h.HarnessError, match="demo/__init__.pyi"):
+        integration.test_demo_stubs(case, tmp_path / "work", True, None, print)
+    assert h.read_tree(reference) == {"demo/__init__.pyi": b"original"}

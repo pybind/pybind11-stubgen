@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 Snapshot = dict[str, bytes]
@@ -286,3 +287,50 @@ def diagnostics(
             else:
                 summary += f"\nArtifacts: {destination}"
         raise HarnessError(summary) from error
+
+
+BRANCHES = ("v2.9", "v2.11", "v2.12", "v2.13", "v3.0")
+NUMPY_FORMATS = ("numpy-array-wrap-with-annotated", "numpy-array-use-type-var")
+
+
+@dataclass(frozen=True)
+class DemoCase:
+    repo: Path
+    python_version: tuple[int, int]
+    branch: str
+    numpy_format: str
+
+    @property
+    def id(self) -> str:
+        major, minor = self.python_version
+        return f"python-{major}.{minor}-pybind11-{self.branch}-{self.numpy_format}"
+
+    @property
+    def stubs_root(self) -> Path:
+        return self.repo / "tests/stubs"
+
+    @property
+    def errors_root(self) -> Path:
+        return self.repo / "tests/errors"
+
+    @property
+    def stub_profile(self) -> Path:
+        major, minor = self.python_version
+        return Path(f"python-{major}.{minor}") / f"pybind11-{self.branch}" / self.numpy_format
+
+    @property
+    def error_profile(self) -> Path:
+        return Path(f"pybind11-{self.branch}")
+
+
+def make_case(
+    repo: Path, python_version: tuple[int, int], branch: str | None, numpy_format: str | None,
+) -> DemoCase:
+    if python_version < (3, 10):
+        raise HarnessError("The test harness requires Python >=3.10")
+    if branch not in BRANCHES or numpy_format not in NUMPY_FORMATS:
+        raise HarnessError("Native tests require --pybind11-branch and --numpy-format; use tox to build the matching demo")
+    case = DemoCase(repo.resolve(), python_version, branch, numpy_format)
+    resolve_profile(case.stubs_root, case.stub_profile)
+    resolve_profile(case.errors_root, case.error_profile)
+    return case
