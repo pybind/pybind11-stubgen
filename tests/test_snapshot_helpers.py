@@ -299,11 +299,14 @@ def test_ruff_pin_configuration_target_order_and_cache_policy(tmp_path, monkeypa
     assert len(commands) == 2
     assert commands[0][0][:5] == ["uvx", "--from", "ruff==0.15.20", "ruff", "format"]
     assert commands[1][0][4:8] == ["check", "--select", "I,RUF022", "--fix"]
-    for argv, kwargs in commands:
+    for (argv, kwargs), log_name in zip(commands, ("ruff-format", "ruff-check")):
         assert argv[argv.index("--config") + 1] == str(repo / "pyproject.toml")
         assert argv[argv.index("--target-version") + 1] == "py312"
         assert "--no-cache" in argv
-        assert kwargs["cwd"] == tmp_path
+        assert argv[-1] == str(tmp_path / "output")
+        # Ruff's cwd controls first-party discovery even with explicit config.
+        assert kwargs["cwd"] == repo
+        assert kwargs["log"] == tmp_path / log_name
 
 
 def test_invalid_ruff_pin_and_formatter_failure_are_not_ignored(tmp_path, monkeypatch):

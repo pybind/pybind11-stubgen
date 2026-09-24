@@ -265,12 +265,11 @@ def format_stubs(
         "--no-cache",
         str(output),
     ]
-    run_command(
-        prefix + ["format"] + options, cwd=workspace, log=workspace / "ruff-format"
-    )
+    # Preserve repository-root first-party import discovery with explicit config.
+    run_command(prefix + ["format"] + options, cwd=repo, log=workspace / "ruff-format")
     run_command(
         prefix + ["check", "--select", "I,RUF022", "--fix"] + options,
-        cwd=workspace,
+        cwd=repo,
         log=workspace / "ruff-check",
     )
 
