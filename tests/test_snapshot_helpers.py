@@ -1,3 +1,4 @@
+import errno
 import os
 from pathlib import Path
 
@@ -129,6 +130,44 @@ def test_update_handles_file_directory_shape_changes(tmp_path):
     actual = {"old": b"now a file", "flat/child": b"now nested"}
     h.check_snapshot(tmp_path, Path("case"), actual, update=True)
     assert h.read_tree(tmp_path / "case") == actual
+
+
+@pytest.mark.parametrize("error_number", [errno.EACCES, errno.EPERM, errno.EIO])
+def test_update_propagates_directory_cleanup_failures(tmp_path, monkeypatch, error_number):
+    write_files(tmp_path / "case", {"keep.pyi": b"old"})
+    blocked = tmp_path / "case/empty"
+    blocked.mkdir()
+    error = OSError(error_number, "synthetic cleanup failure", str(blocked))
+    rmdir = Path.rmdir
+
+    def failing_rmdir(path):
+        if path == blocked:
+            raise error
+        return rmdir(path)
+
+    monkeypatch.setattr(Path, "rmdir", failing_rmdir)
+    with pytest.raises(OSError) as failure:
+        h.check_snapshot(tmp_path, Path("case"), {"keep.pyi": b"new"}, update=True)
+    assert failure.value is error
+    assert (tmp_path / "case/keep.pyi").read_bytes() == b"old"
+
+
+@pytest.mark.parametrize("error_number", [None, errno.ENOTEMPTY, errno.EEXIST])
+def test_update_preserves_nonempty_directories(tmp_path, monkeypatch, error_number):
+    write_files(tmp_path / "case", {"nested/keep.pyi": b"old"})
+    retained = tmp_path / "case/nested"
+    rmdir = Path.rmdir
+
+    def nonempty_rmdir(path):
+        if path == retained and error_number is not None:
+            raise OSError(error_number, "Directory not empty", str(retained))
+        return rmdir(path)
+
+    monkeypatch.setattr(Path, "rmdir", nonempty_rmdir)
+    assert h.check_snapshot(
+        tmp_path, Path("case"), {"nested/keep.pyi": b"new"}, update=True,
+    ) == ("nested/keep.pyi",)
+    assert (retained / "keep.pyi").read_bytes() == b"new"
 
 
 def test_scoped_update_rejects_extra_actual_files_before_writing(tmp_path):

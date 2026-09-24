@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import errno
 import os
 from pathlib import Path, PurePosixPath
 
@@ -126,9 +127,10 @@ def check_snapshot(
         for directory in sorted(directories, key=lambda path: len(path.parts), reverse=True):
             try:
                 directory.rmdir()
-            except OSError:
+            except OSError as error:
                 # Nonempty directories contain retained reference files.
-                continue
+                if error.errno not in (errno.ENOTEMPTY, errno.EEXIST):
+                    raise
     for name, content in actual.items():
         target = destination / relative_file(name)
         target.parent.mkdir(parents=True, exist_ok=True)
