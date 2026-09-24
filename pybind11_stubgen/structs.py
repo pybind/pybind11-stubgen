@@ -1,18 +1,10 @@
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from dataclasses import field as field_
-from typing import Tuple, Union
+from typing import Literal, Tuple, Union
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-
-    Modifier = Literal["static", "class", None]
-else:
-    from typing import Optional
-
-    Modifier = Optional[str]
+Modifier = Literal["static", "class", None]
 
 
 class Identifier(str):
