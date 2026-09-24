@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import difflib
 import errno
+import json
 import os
+import re
+import subprocess
 from pathlib import Path, PurePosixPath
 
 Snapshot = dict[str, bytes]
@@ -136,3 +139,77 @@ def check_snapshot(
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
     return changed
+
+
+def run_command(
+    argv: list[str], *, cwd: Path, log: Path, expected_status: int = 0,
+) -> subprocess.CompletedProcess[bytes]:
+    result = None
+    stdout = stderr = b""
+    problem = None
+    try:
+        result = subprocess.run(argv, cwd=cwd, capture_output=True, timeout=300, check=False)
+        stdout, stderr = result.stdout, result.stderr
+        if result.returncode != expected_status:
+            problem = f"exit {result.returncode}, expected {expected_status}"
+    except subprocess.TimeoutExpired as error:
+        stdout, stderr = error.stdout or b"", error.stderr or b""
+        problem = "timed out after 300 seconds"
+    except OSError as error:
+        problem = str(error)
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.with_suffix(".stdout").write_bytes(stdout)
+    log.with_suffix(".stderr").write_bytes(stderr)
+    log.with_suffix(".json").write_text(json.dumps({
+        "command": argv, "cwd": str(cwd),
+        "returncode": result.returncode if result is not None else None,
+        "error": problem,
+    }, indent=2) + "\n", encoding="utf-8")
+    if problem is not None:
+        raise HarnessError(
+            f"{argv!r}: {problem}\nLogs: {log}\n"
+            f"stdout:\n{stdout.decode('utf-8', errors='replace')}\n"
+            f"stderr:\n{stderr.decode('utf-8', errors='replace')}"
+        )
+    assert result is not None
+    return result
+
+
+def normalize_stderr(stderr: bytes) -> bytes:
+    return re.sub(rb"0x[0-9A-Fa-f]+", b"0x1234abcd5678", stderr)
+
+
+def validate_error_run(result: subprocess.CompletedProcess[bytes], output: Path) -> bytes:
+    if result.returncode != 1:
+        raise HarnessError(f"Expected fatal-error exit 1, got {result.returncode}")
+    if b"Traceback (most recent call last)" in result.stderr:
+        raise HarnessError("Unexpected Python traceback in fatal-error run")
+    if b"Terminating due to previous errors" not in result.stderr:
+        raise HarnessError("Missing fatal-diagnostic termination marker")
+    if read_tree(output):
+        raise HarnessError("Fatal-error run unexpectedly wrote output")
+    return normalize_stderr(result.stderr)
+
+
+def ruff_version(repo: Path) -> str:
+    text = (repo / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+    blocks = re.split(r"(?m)^\s*-\s+repo:\s*", text)[1:]
+    blocks = [block for block in blocks if block.splitlines()[0].strip().strip("\"'")
+              == "https://github.com/astral-sh/ruff-pre-commit"]
+    if len(blocks) != 1:
+        raise HarnessError("Cannot identify the Ruff pre-commit pin")
+    match = re.search(r'''(?m)^\s*rev:\s*["']?v?(\d+\.\d+\.\d+)["']?\s*$''', blocks[0])
+    if match is None:
+        raise HarnessError("Cannot resolve the Ruff pre-commit version")
+    return match.group(1)
+
+
+def format_stubs(
+    output: Path, repo: Path, workspace: Path, python_version: tuple[int, int],
+) -> None:
+    prefix = ["uvx", "--from", f"ruff=={ruff_version(repo)}", "ruff"]
+    options = ["--config", str(repo / "pyproject.toml"), "--target-version",
+               f"py{python_version[0]}{python_version[1]}", "--no-cache", str(output)]
+    run_command(prefix + ["format"] + options, cwd=workspace, log=workspace / "ruff-format")
+    run_command(prefix + ["check", "--select", "I,RUF022", "--fix"] + options,
+                cwd=workspace, log=workspace / "ruff-check")

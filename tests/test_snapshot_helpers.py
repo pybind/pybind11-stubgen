@@ -1,5 +1,8 @@
 import errno
+import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -176,3 +179,98 @@ def test_scoped_update_rejects_extra_actual_files_before_writing(tmp_path):
         h.check_snapshot(tmp_path, Path("case"), {"stderr.txt": b"new", "extra": b"bad"},
                          update=True, only=frozenset({"stderr.txt"}))
     assert h.read_tree(tmp_path / "case") == {"stderr.txt": b"original", "unrelated": b"keep"}
+
+
+@pytest.mark.parametrize("status", [0, 1, 2, 127])
+def test_run_command_requires_exact_status_and_retains_logs(tmp_path, status):
+    command = [sys.executable, "-c", f"import sys; print('diagnostic', file=sys.stderr); sys.exit({status})"]
+    if status == 1:
+        result = h.run_command(command, cwd=tmp_path, log=tmp_path / "process", expected_status=1)
+        assert result.returncode == 1
+    else:
+        with pytest.raises(h.HarnessError, match="expected 1"):
+            h.run_command(command, cwd=tmp_path, log=tmp_path / "process", expected_status=1)
+    assert b"diagnostic" in (tmp_path / "process.stderr").read_bytes()
+    assert json.loads((tmp_path / "process.json").read_text())["returncode"] == status
+
+
+def test_missing_command_and_timeout_are_diagnostic(tmp_path, monkeypatch):
+    with pytest.raises(h.HarnessError):
+        h.run_command([str(tmp_path / "missing-command")], cwd=tmp_path, log=tmp_path / "missing")
+    assert (tmp_path / "missing.json").is_file()
+
+    def timeout(argv, **kwargs):
+        assert kwargs["timeout"] == 300
+        raise subprocess.TimeoutExpired(argv, 300, output=b"partial", stderr=b"stuck")
+
+    monkeypatch.setattr(h.subprocess, "run", timeout)
+    with pytest.raises(h.HarnessError, match="300"):
+        h.run_command(["fake"], cwd=tmp_path, log=tmp_path / "timeout")
+    assert (tmp_path / "timeout.stdout").read_bytes() == b"partial"
+    assert (tmp_path / "timeout.stderr").read_bytes() == b"stuck"
+
+
+@pytest.mark.parametrize("status,stderr,files", [
+    (0, b"Terminating due to previous errors", {}),
+    (2, b"Terminating due to previous errors", {}),
+    (1, b"Traceback (most recent call last):\nTerminating due to previous errors", {}),
+    (1, b"unrelated failure", {}),
+    (1, b"Terminating due to previous errors", {"unexpected.pyi": b"x"}),
+])
+def test_invalid_fatal_error_runs_are_rejected(tmp_path, status, stderr, files):
+    write_files(tmp_path / "output", files)
+    result = subprocess.CompletedProcess(["stubgen"], status, b"", stderr)
+    with pytest.raises(h.HarnessError):
+        h.validate_error_run(result, tmp_path / "output")
+
+
+def test_error_normalization_is_narrow(tmp_path):
+    stderr = b"object at 0xAB12\nTerminating due to previous errors\n"
+    result = subprocess.CompletedProcess(["stubgen"], 1, b"", stderr)
+    assert h.validate_error_run(result, tmp_path / "absent") == (
+        b"object at 0x1234abcd5678\nTerminating due to previous errors\n"
+    )
+    assert h.normalize_stderr(b"ordinary text 123 abc 0xZZ") == b"ordinary text 123 abc 0xZZ"
+
+
+def test_ruff_pin_configuration_target_order_and_cache_policy(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    write_files(repo, {
+        ".pre-commit-config.yaml": (
+            b"repos:\n  - repo: unrelated\n    rev: v99.0.0\n"
+            b"  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.20\n"
+        ),
+        "pyproject.toml": b"[tool.ruff]\nline-length = 88\n",
+    })
+    commands = []
+
+    def record(argv, **kwargs):
+        commands.append((argv, kwargs))
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+    monkeypatch.setattr(h, "run_command", record)
+    h.format_stubs(tmp_path / "output", repo, tmp_path, (3, 12))
+    assert len(commands) == 2
+    assert commands[0][0][:5] == ["uvx", "--from", "ruff==0.15.20", "ruff", "format"]
+    assert commands[1][0][4:8] == ["check", "--select", "I,RUF022", "--fix"]
+    for argv, kwargs in commands:
+        assert argv[argv.index("--config") + 1] == str(repo / "pyproject.toml")
+        assert argv[argv.index("--target-version") + 1] == "py312"
+        assert "--no-cache" in argv
+        assert kwargs["cwd"] == tmp_path
+
+
+def test_invalid_ruff_pin_and_formatter_failure_are_not_ignored(tmp_path, monkeypatch):
+    write_files(tmp_path, {".pre-commit-config.yaml": b"repos: []\n"})
+    with pytest.raises(h.HarnessError, match="Ruff"):
+        h.ruff_version(tmp_path)
+    write_files(tmp_path, {".pre-commit-config.yaml": (
+        b"repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.20\n"
+    )})
+
+    def fail(argv, **kwargs):
+        raise h.HarnessError("formatter failed")
+
+    monkeypatch.setattr(h, "run_command", fail)
+    with pytest.raises(h.HarnessError, match="formatter failed"):
+        h.format_stubs(tmp_path / "output", tmp_path, tmp_path, (3, 10))
