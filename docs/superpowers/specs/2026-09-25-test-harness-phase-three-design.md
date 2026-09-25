@@ -2,10 +2,10 @@
 
 ## Status and starting point
 
-The orchestration, fixture-build, and acceptance sections were approved in
-conversation. This written specification awaits user review. The runtime
-NumPy reconciliation described below was discovered while preparing the document
-and is explicitly part of that review, not a silently approved dependency change.
+The user approved the orchestration, fixture-build, and acceptance design and
+this written specification, explicitly including the NumPy/SciPy pins. The
+runtime dependency reconciliation below was discovered while preparing the
+specification and approved during its review, not silently adopted.
 No phase-three implementation is included here.
 
 Continue on `test-harness-phase-one` in its existing isolated worktree. The
@@ -169,7 +169,7 @@ installation logs show NumPy being reinstalled at this stage. Therefore the
 configured requirement alone is not a reliable description of native runtime
 coverage; the mismatch is present before phase three.
 
-The proposed policy is to pin the actual observed runtime versions, preserving
+Pin the actual observed runtime versions, preserving
 what the accepted native tests exercise rather than silently switching them to
 NumPy 1.x or upgrading them further:
 
@@ -180,7 +180,7 @@ NumPy 1.x or upgrading them further:
 | 3.12–3.13 | `2.5.3` | `1.17.1` |
 
 All existing environments for a given interpreter agree on these versions.
-This NumPy declaration change requires the user's explicit written-spec review.
+This NumPy declaration change was explicitly approved during written-spec review.
 It changes declared native setup policy, not the observed runtime baseline.
 Keep the current pytest and typing-extensions requirements; unrelated package
 or root development-group changes are not included.
