@@ -866,14 +866,23 @@ def test_empty_output_cannot_erase_references(tmp_path, monkeypatch, empty_at):
 
 
 def test_entry_points_use_pytest_without_legacy_mutating_checks():
+    from configparser import ConfigParser
+
     repo = Path(__file__).resolve().parents[1]
     tox = (repo / "tox.ini").read_text()
     ci = (repo / ".github/workflows/ci.yml").read_text()
-    assert "-m pytest" in tox and "{posargs}" in tox
-    assert "pytest>=8,<9" in tox
+    config = ConfigParser(interpolation=None)
+    config.read_string(tox)
+    native = config["testenv"]
+    assert "{envpython} -I -m pytest" in native["commands"]
+    assert "{posargs}" in native["commands"]
+    assert "STUBGEN_TEST_INSTALLED = 1" in native["setenv"]
+    assert "pytest>=8,<9" in native["deps"]
+    assert "--update-snapshots" not in native["commands"]
     assert "PYTHON_TAG_FILE" not in tox
     native_job = ci.split("  tests:\n", 1)[1].split("  test-cli-options:\n", 1)[0]
-    assert "-m pytest" in native_job
+    assert "TOX_PROFILE: ${{ matrix.env }}" in native_job
+    assert 'tox -e "$TOX_PROFILE" --installpkg "${wheels[0]}"' in native_job
     assert "tmp/pytest-artifacts/" in native_job
     assert "--update-snapshots" not in native_job
     for script in ("check-demo-stubs-generation.sh", "check-demo-errors-generation.sh"):

@@ -45,6 +45,7 @@
 | `tox.ini` | Single native profile/dependency/mode authority, local wheel packaging, installed pytest execution. |
 | `tests/native_matrix.py` (new) | Validate expanded tox names and emit compact CI matrix JSON. |
 | `tests/unit/test_native_matrix.py` (new) | Independent case inventory, adapter validation, real CLI failures. |
+| `tests/test_snapshot_helpers.py` | Modernize only `test_entry_points_use_pytest_without_legacy_mutating_checks` for CI-to-tox-to-installed-pytest delegation; preserve every other harness self-test and the test count. |
 | `.github/workflows/ci.yml` | Derive native matrix, invoke tox with the downloaded wheel, retain early and late failure diagnostics. |
 | `tests/README.md` | Commands, renamed profiles, dependency policy, serial updates, and verification boundaries. |
 
@@ -60,7 +61,7 @@ git check-ignore -q "$E"
 mkdir -p "$E"
 ```
 
-Set `E` in each shell invocation that uses it; tool calls do not share shell variables. After building a generator wheel, save its absolute path in `$E/generator-wheel.path` and reload `WHEEL` from that file in later commands. Keep logs, disposable source copies, command/status records, and per-task reports there. Do not read or reuse another plan's scratch helpers. Capture before/after reference and index states for every native verification batch. Intentional commits change the index between batches; comparisons are within each batch, not against the pre-implementation index forever.
+Set `E` in each shell invocation that uses it; tool calls do not share shell variables. After building a generator wheel, save its absolute path in `$E/generator-wheel.path` and independently record its SHA-256 in `$E/generator-wheel.sha256` before invoking tox. Reload `WHEEL` and `WHEEL_SHA256` from those files in later commands; verify the digest is unchanged afterward. Keep logs, disposable source copies, command/status records, and per-task reports there. Do not read or reuse another plan's scratch helpers. Capture before/after reference and index states for every native verification batch. Intentional commits change the index between batches; comparisons are within each batch, not against the pre-implementation index forever.
 
 Fast checks, repeated on both endpoint interpreters during each task:
 
@@ -927,6 +928,7 @@ git commit -m "test: build pinned native fixtures once per tox profile"
 **Files:**
 - Create: `tests/native_matrix.py`, `tests/unit/test_native_matrix.py`.
 - Modify: `.github/workflows/ci.yml`.
+- Narrow correction: only `test_entry_points_use_pytest_without_legacy_mutating_checks` in `tests/test_snapshot_helpers.py` (plus a local stdlib import), and this plan's affected scope/probe/preservation passages.
 
 **Interfaces:**
 - Consumes the expanded default native names from `tox list -d --no-desc`; consumes Task 3's `--installpkg` route, naming contract, and artifact locations.
@@ -1151,6 +1153,8 @@ Replace the existing `tests` job, not the unit/gemmi/check/build-publication log
 
 `include-hidden-files` is needed for `.tox` artifacts. Restrict paths to logs/evidence, not whole environments or fixture wheels. The old native-only annotation installation step is removed with the duplicate setup route; pytest/JUnit diagnostics remain available. No changes to gemmi's annotation step, release credentials, or publication conditions.
 
+Modernize only the existing entry-point regression named in the file scope: the retained failures establish RED because the obsolete direct-CI `-m pytest` assertion conflicts with approved tox delegation. Require CI's shared profile/`--installpkg` invocation and native `[testenv]` installed pytest execution specifically (stdlib `ConfigParser`, not a match accidentally satisfied by unit commands). Preserve legacy-script, automatic-update, dependency, and diagnostic guards and all other self-tests. Run process-local negative controls for broken CI delegation and removed native pytest, then restored focused and cumulative greens; no misleading workflow comments or new test dependencies.
+
 - [ ] **Step 5: Exercise the supplied-wheel route locally and commit.**
 
 Build the generator wheel from a clean tracked-source archive (including Task 3's committed tree). Use fresh directory names for later repetitions:
@@ -1169,9 +1173,16 @@ print(wheel.resolve())
 PY
 )
 printf '%s\n' "$WHEEL" > "$E/generator-wheel.path"
+python - "$WHEEL" > "$E/generator-wheel.sha256" <<'PY'
+import hashlib
+from pathlib import Path
+import sys
+print(hashlib.sha256(Path(sys.argv[1]).read_bytes()).hexdigest())
+PY
+WHEEL_SHA256=$(< "$E/generator-wheel.sha256")
 ```
 
-Record its SHA-256 and verify its production files match the current tracked production tree. Do not change generator package discovery or clean unrelated worktree build output.
+Record this digest before invoking tox and verify its production files match the current tracked production tree. Do not change generator package discovery or clean unrelated worktree build output.
 
 Run the CI command locally across all 11 profiles, with the batch audit and an absolute wheel path:
 
@@ -1181,7 +1192,9 @@ python "$E/audit_native.py" --label supplied-wheel -- \
   tox --installpkg "$WHEEL"
 ```
 
-Inspect tox package-install records: they must name the supplied wheel and must not build/reinstall the generator from `.`. Distinguish expected fixture-wheel builds from a forbidden replacement generator build. Confirm installed origin within pytest. Save this artifact-identity probe as `$E/check_supplied_wheel.py`, then run it with each of the 11 native interpreters using `-I`, passing the absolute `$WHEEL` path:
+Inspect and retain tox package-install records independently: each must name exactly the supplied wheel, exit zero, and not build/reinstall the generator from `.`. Distinguish expected fixture-wheel builds from a forbidden replacement generator build. Confirm installed origin within pytest. Investigation with uv 0.12.19 established that local wheel installs record the exact file URL with `archive_info: {}`; a mandatory PEP 610 hash was an unsupported assumption, not an installer defect to work around. Keep uv and `--installpkg` unchanged. Combine the independently saved pre-run hash, exact recorded file URL, post-run artifact digest, installed inventory/bytes/origin, and command records; none alone suffices.
+
+Save this scratch artifact-identity probe as `$E/check_supplied_wheel.py`, then run it with each of the 11 native interpreters as `".tox/$profile/bin/python" -I "$E/check_supplied_wheel.py" "$WHEEL" "$WHEEL_SHA256"`. The second argument must come from the saved pre-run digest, not a second computation of the current artifact:
 
 ```python
 import hashlib
@@ -1189,12 +1202,45 @@ from importlib.metadata import distribution
 import json
 from pathlib import Path
 import sys
+from urllib.parse import urlsplit
+from urllib.request import url2pathname
 import zipfile
+import re
 
 import pybind11_stubgen
 
+assert len(sys.argv) == 3, 'expected absolute wheel path and saved pre-run SHA-256'
 wheel = Path(sys.argv[1])
-digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+assert wheel.is_absolute(), wheel
+wheel = wheel.resolve(strict=True)
+expected_digest = sys.argv[2]
+assert re.fullmatch(r'[0-9a-f]{64}', expected_digest), expected_digest
+payload = wheel.read_bytes()
+digest = hashlib.sha256(payload).hexdigest()
+assert digest == expected_digest, ('expected digest mismatch', digest, expected_digest)
+info = json.loads(distribution('pybind11-stubgen').read_text('direct_url.json'))
+assert isinstance(info, dict) and set(info) == {'url', 'archive_info'}, info
+assert isinstance(info['url'], str), info
+url = urlsplit(info['url'])
+assert url.scheme == 'file' and not url.netloc and not url.query and not url.fragment, info
+recorded_path = Path(url2pathname(url.path))
+assert recorded_path.is_absolute(), info
+recorded_path = recorded_path.resolve(strict=True)
+assert recorded_path == wheel, ('supplied path mismatch', recorded_path, wheel)
+assert hashlib.sha256(recorded_path.read_bytes()).hexdigest() == expected_digest == digest
+archive_info = info['archive_info']
+assert isinstance(archive_info, dict) and set(archive_info) <= {'hash', 'hashes'}, info
+hashes = archive_info.get('hashes', {})
+assert isinstance(hashes, dict), info
+provided_hashes = list(hashes.items())
+if 'hash' in archive_info:
+    value = archive_info['hash']
+    assert isinstance(value, str) and value.count('=') == 1, info
+    provided_hashes.append(tuple(value.split('=')))
+for algorithm, value in provided_hashes:
+    assert isinstance(algorithm, str) and isinstance(value, str), info
+    # Unknown algorithms/schemas fail rather than silently bypassing evidence.
+    assert hashlib.new(algorithm, payload).hexdigest() == value, info
 origin = Path(pybind11_stubgen.__file__).resolve()
 assert origin.is_relative_to(Path(sys.prefix).resolve()), origin
 installed = origin.parent.parent
@@ -1205,14 +1251,13 @@ with zipfile.ZipFile(wheel) as archive:
     assert names == actual
     for name in names:
         assert archive.read(name) == (installed / name).read_bytes(), name
-info = json.loads(distribution('pybind11-stubgen').read_text('direct_url.json'))
-archive_info = info['archive_info']
-assert (archive_info.get('hashes', {}).get('sha256') == digest
-        or archive_info.get('hash') == 'sha256=' + digest), info
-print(json.dumps({'origin': str(origin), 'wheel_sha256': digest, 'direct_url': info}))
+print(json.dumps({'python': sys.version, 'prefix': sys.prefix, 'origin': str(origin),
+                  'wheel': str(wheel), 'recorded_path': str(recorded_path),
+                  'expected_sha256': expected_digest, 'wheel_sha256': digest,
+                  'production_files': sorted(names), 'direct_url': info}))
 ```
 
-If the installer records an unexpected provenance schema, investigate rather than removing the artifact identity check; origin and equal source files alone are insufficient. Run focused and cumulative tests on 3.10/3.13. Run this mutation with isolated uv supplying pytest, then restore an unpatched green run. Run YAML/all applicable hooks.
+Empty `archive_info` is explicitly supported; any supplied hashes must also match, and contradictory hashes, unexpected schemas, remote authority, query, and fragment are rejected. Add scratch negative controls with a wrong expected digest and a distinct same-production-payload wheel/path, requiring identity failure for both; restore the true expected artifact and rerun green. Retain earlier failures. Confirm the saved digest still matches after tox, run a fresh all-11 batch under a unique audit label, and retain strict probe results plus exact install records. Run focused and cumulative tests on 3.10/3.13. Run this mutation with isolated uv supplying pytest, then restore an unpatched green run. Run YAML/all applicable hooks.
 
 ```python
 import sys
@@ -1237,7 +1282,8 @@ assert code == pytest.ExitCode.TESTS_FAILED, code
 ```
 
 ```sh
-git add tests/native_matrix.py tests/unit/test_native_matrix.py .github/workflows/ci.yml
+git add tests/native_matrix.py tests/unit/test_native_matrix.py .github/workflows/ci.yml \
+  tests/test_snapshot_helpers.py docs/superpowers/plans/2026-09-25-test-harness-phase-three.md
 git commit -m "test: derive native CI jobs from tox and consume the built wheel"
 ```
 
@@ -1334,7 +1380,7 @@ uv run --no-project --isolated --with tox --with tox-uv tox \
   -e py310-unit,py311-unit,py312-unit,py313-unit
 ```
 
-Build `$WHEEL` from the final tracked implementation first, not from a stale task snapshot. Reuse Task 4's archive/build procedure with new `final-source`/`final-dist` directories and update `generator-wheel.path`. Test the installed guard's red/green behavior on a narrow selection: from the checkout, run the fresh wheel environment's Python without `-I`, with `STUBGEN_TEST_INSTALLED=1`, on `tests/unit/test_pipeline.py::test_python_module_pipeline`; require a setup error naming the checkout origin. Restore `-I` and require a passing test, then run the full unpatched selection.
+Build `$WHEEL` from the final tracked implementation first, not from a stale task snapshot. Reuse Task 4's archive/build procedure with new `final-source`/`final-dist` directories and update `generator-wheel.path` and the independently captured pre-run `generator-wheel.sha256`; reload both `WHEEL` and `WHEEL_SHA256` before acceptance. Test the installed guard's red/green behavior on a narrow selection: from the checkout, run the fresh wheel environment's Python without `-I`, with `STUBGEN_TEST_INSTALLED=1`, on `tests/unit/test_pipeline.py::test_python_module_pipeline`; require a setup error naming the checkout origin. Restore `-I` and require a passing test, then run the full unpatched selection.
 
 - [ ] **Step 3: Re-run native acceptance and inspect exact cases, reuse, and pins.**
 
@@ -1366,7 +1412,7 @@ assert len(seen) == len(set(seen)) == 13
 
 Sorting here compares case inventories only; never sort diagnostic stderr or expected output. Check the JUnit runtime properties against the explicit version table. For each dual-mode profile, correlate its single fixture build command/evidence record with both pytest mode IDs and the unchanged extension digest. Check `evidence.json` before/after versions, CMake's selected version/paths, and the audited fixture payload.
 
-Use `--result-json` on tox verification runs when useful to retain the package installation command list. Verify installed generator files against `$WHEEL` with `zipfile`/hashes inside each environment; do not infer artifact identity solely from a site-packages path.
+Use `--result-json` on tox verification runs when useful to retain the package installation command list. Run Task 4's strict probe inside every supplied-wheel environment with `-I "$E/check_supplied_wheel.py" "$WHEEL" "$WHEEL_SHA256"`, consuming the saved pre-run hash. Require unchanged post-run digest, exact local recorded file URL, complete installed production inventory/bytes and origin, and independently retained successful exact-wheel install commands with no generator source replacement. Support the investigated empty `archive_info` only as part of this complete evidence scheme; verify any hashes present. Repeat wrong-digest and same-payload wrong-path negative controls and restored greens; do not infer artifact identity solely from a site-packages path.
 
 - [ ] **Step 4: Demonstrate bounded parallel isolation and sibling-source freshness.**
 
@@ -1408,12 +1454,14 @@ Audit protected paths against `807e7e4`:
 ```sh
 git diff --exit-code 807e7e4 -- pybind11_stubgen tests/py-demo/demo \
   tests/demo-lib tests/py-demo/bindings/src \
-  tests/stubs tests/errors tests/snapshot_helpers.py tests/test_snapshot_helpers.py \
+  tests/stubs tests/errors tests/snapshot_helpers.py \
   tests/test_demo_stubs.py tests/test_demo_errors.py pyproject.toml uv.lock
 uv lock --check
 uv run pre-commit run --all-files
 git diff --check
 ```
+
+Separately compare `tests/test_snapshot_helpers.py` against `807e7e4`: only `test_entry_points_use_pytest_without_legacy_mutating_checks` may differ for Task 4's justified CI-to-tox-to-installed-pytest modernization (including its local stdlib import). Verify all other functions and test count unchanged, and legacy/update/dependency/diagnostic guards retained. This is not a general exemption for harness behavior.
 
 Review the remaining CMake/fixture metadata/tox/CI changes manually against the spec. Confirm gemmi, release triggers/permissions/conditions, root package discovery, and all snapshot aliases are unchanged. No old installer calls or old native environment examples should remain in active runner/docs files (historical design/plan documents may retain them).
 
