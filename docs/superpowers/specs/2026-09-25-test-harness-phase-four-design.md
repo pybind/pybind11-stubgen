@@ -4,8 +4,8 @@
 
 The user approved file-level sharing, an explicit TOML catalog, development/test
 TOML dependencies, case-scoped copy-on-write updates, and the safety and
-verification design below. This written specification awaits user review before
-implementation planning. No phase-four implementation is included here.
+verification design below. The user has also approved this written specification.
+No phase-four implementation is included here.
 
 Continue on `test-harness-phase-one` in its existing worktree. At the user's
 request it was rebased onto `prune-historical-snapshots` (`b651555`). The new
