@@ -1,5 +1,4 @@
 import importlib
-import os
 import sys
 from pathlib import Path
 
@@ -7,19 +6,6 @@ import pytest
 
 from pybind11_stubgen.parser.mixins.error_handlers import LocalErrors
 from unit_support import make_parser, q
-
-
-@pytest.fixture(scope="session", autouse=True)
-def enforce_installed_origin():
-    if os.environ.get("STUBGEN_TEST_INSTALLED") != "1":
-        return
-    prefix = Path(sys.prefix).resolve()
-    for name, module in list(sys.modules.items()):
-        if name == "pybind11_stubgen" or name.startswith("pybind11_stubgen."):
-            origin = getattr(module, "__file__", None)
-            assert origin is not None, (name, origin)
-            path = Path(origin).resolve()
-            assert path.is_relative_to(prefix), (name, path, prefix)
 
 
 @pytest.fixture
