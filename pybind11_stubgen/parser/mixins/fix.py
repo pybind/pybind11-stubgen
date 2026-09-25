@@ -4,7 +4,6 @@ import builtins
 import importlib
 import inspect
 import re
-import sys
 import types
 from logging import getLogger
 from typing import Any, Callable, Sequence, TypeVar
@@ -426,13 +425,6 @@ class FixTypingTypeNames(IParser):
             "Buffer",
         )
     )
-
-    def __init__(self):
-        super().__init__()
-        if sys.version_info < (3, 9):
-            self.__typing_extensions_names.add(Identifier("Annotated"))
-        if sys.version_info < (3, 8):
-            self.__typing_extensions_names.add(Identifier("Literal"))
 
     def parse_annotation_str(
         self, annotation_str: str
