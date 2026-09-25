@@ -3,8 +3,8 @@
 ## Status and starting point
 
 The scope, test structure, and execution/acceptance design below were approved
-in conversation. This written specification is awaiting user review before an
-implementation plan is written. No phase-two implementation is included here.
+in conversation. The user also approved this written specification before
+implementation planning. No phase-two implementation is included here.
 
 Build on `test-harness-phase-one` at `a306491`, including the uv tox installation
 fix and the separately reviewed stderr-order corrections. Use the existing
