@@ -82,6 +82,10 @@ for native checks both locally and in CI. NumPy/SciPy are pinned to the observed
 phase-two runtime versions; fixture installation cannot replace them. The root
 development dependency group is not the native test environment.
 
+The retained labels `v2.9`, `v2.11`, `v2.12`, `v2.13`, and `v3.0` select reference
+compatibility series (including via `--pybind11-branch`). They no longer designate
+floating Git inputs: tox installs exact pinned pybind11 distribution versions.
+
 Local native tox installs a generator wheel. CI supplies its existing build
 artifact through the same runner. Installed origins are checked inside pytest.
 After a matching tox run, a single check can be repeated without rebuilding:

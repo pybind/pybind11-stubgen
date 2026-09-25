@@ -198,3 +198,38 @@ def test_wheel_payload_is_exactly_package_extension_and_metadata(tmp_path, extra
     (package / "__init__.py").write_bytes(b"VALUE = 2\n")
     with pytest.raises(RuntimeError):
         audit_wheel(wheel, package)
+
+
+def test_wheel_payload_rejects_duplicate_members(tmp_path):
+    package = tmp_path / "demo"
+    package.mkdir()
+    (package / "__init__.py").write_bytes(b"VALUE = 1\n")
+    wheel = tmp_path / "fixture.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr("demo/__init__.py", b"VALUE = 1\n")
+        archive.writestr(
+            "demo/_bindings" + EXTENSION_SUFFIXES[0], b"test payload, not imported"
+        )
+        archive.writestr("py_demo-0.0.0.dist-info/METADATA", b"Name: py-demo\n")
+        with pytest.warns(UserWarning, match="Duplicate name"):
+            archive.writestr("demo/__init__.py", b"VALUE = 1\n")
+    with pytest.raises(RuntimeError, match="payload"):
+        audit_wheel(wheel, package)
+
+
+@pytest.mark.parametrize("extension_count", [0, 2], ids=["missing", "multiple"])
+def test_wheel_payload_rejects_invalid_extension_count(tmp_path, extension_count):
+    package = tmp_path / "demo"
+    package.mkdir()
+    (package / "__init__.py").write_bytes(b"VALUE = 1\n")
+    wheel = tmp_path / "fixture.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr("demo/__init__.py", b"VALUE = 1\n")
+        for index in range(extension_count):
+            archive.writestr(
+                "demo/_bindings" + EXTENSION_SUFFIXES[index],
+                b"test payload, not imported",
+            )
+        archive.writestr("py_demo-0.0.0.dist-info/METADATA", b"Name: py-demo\n")
+    with pytest.raises(RuntimeError, match="payload"):
+        audit_wheel(wheel, package)
