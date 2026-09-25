@@ -218,12 +218,14 @@ When a new case reveals an unexpected production failure:
 Document the direct source-checkout command:
 
 ```sh
-uv run --no-project --with 'pytest>=8,<9' python -m pytest \
+uv run --no-project --isolated --with 'pytest>=8,<9' python -m pytest \
   tests/unit tests/test_snapshot_helpers.py
 ```
 
 This provides pytest without syncing the native-heavy development dependency
-group. The suite needs only the standard library, pytest and its dependencies,
+group. `--isolated` prevents uv from reusing an existing worktree environment;
+`--no-project` alone does not guarantee that isolation. The suite needs only
+the standard library, pytest and its dependencies,
 and the generator code. Running it must not build/install the demo, download a
 formatter, or invoke a compiler.
 

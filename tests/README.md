@@ -32,6 +32,31 @@ Or let uv supply only pytest, without syncing the project's native dependencies:
 uv run --no-project --with 'pytest>=8,<9' python -m pytest tests/test_snapshot_helpers.py
 ```
 
+## Compiler-free production tests
+
+`tests/unit/` covers parser/signature and annotation behavior, class ordering,
+printer output, writer paths/contents, and small pure-Python generation flows.
+Its fixtures are independent of `demo`; no native installation or NumPy/SciPy
+is needed. The following command tests source edits directly without syncing
+the development dependency group:
+
+```sh
+uv run --no-project --isolated --with 'pytest>=8,<9' python -m pytest \
+  tests/unit tests/test_snapshot_helpers.py
+```
+
+To test a non-editable installation on each supported matrix interpreter:
+
+```sh
+uv run --no-project --with tox --with tox-uv tox \
+  -e py310-unit,py311-unit,py312-unit,py313-unit
+```
+
+The unit environments install with uv, run isolated Python, and verify the
+actual pytest process imports the installed generator. The default tox list
+still runs the existing 13 native configurations; unit environments are explicit.
+CI adds a separate compiler-free wheel matrix while retaining native/gemmi jobs.
+
 ## Native checks
 
 ```sh
@@ -87,8 +112,16 @@ reference trees. Tox uses its environment temporary directory; CI uploads
 
 ## Add a regression
 
-For harness behavior, add a small synthetic test to `test_snapshot_helpers.py`;
-no compiler is required. For generated-output behavior, add or adjust the demo
-fixture, run a relevant native environment, inspect its failure, then explicitly
-update that environment's expectations. Review only the intended changes and
-run affected shared profiles and the compatibility matrix before merging.
+For harness behavior, add a small synthetic test to `test_snapshot_helpers.py`.
+For compiler-free generator behavior, prefer a focused test in `tests/unit/`
+with explicit expected models or text. Neither route requires a compiler.
+
+When the regression requires real binding behavior, add or adjust the native
+demo fixture, run a relevant native environment, inspect its failure, then
+explicitly update that environment's expectations. Review only the intended
+changes and run affected shared profiles and the compatibility matrix before
+merging.
+
+During test-only phase two, report newly discovered production bugs separately.
+Do not hide them with changed expectations, unexplained skips, or snapshot
+updates; production fixes require a separate scope.

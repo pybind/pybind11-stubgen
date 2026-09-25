@@ -58,6 +58,12 @@ env -u VIRTUAL_ENV uv run --no-project --python 3.10 --with 'pytest>=8,<9' pytho
 env -u VIRTUAL_ENV uv run --no-project --python 3.13 --with 'pytest>=8,<9' python -m pytest tests/unit tests/test_snapshot_helpers.py -q
 ```
 
+Implementation-time correction (Task 7): Task 6 found that `--no-project`
+can still reuse the worktree's `.venv` even with `VIRTUAL_ENV` unset. Add
+`--isolated` to uv-managed source verification commands going forward; the
+commands above and earlier task evidence are retained as historical context.
+Fresh explicit source/wheel venvs and tox commands are unchanged.
+
 Before new files exist, run only `tests/test_snapshot_helpers.py` with both
 commands. The last recorded baseline was 97 passing tests on each interpreter;
 record fresh results rather than relying on that history.
@@ -925,7 +931,7 @@ is needed. The following command tests source edits directly without syncing
 the development dependency group:
 
 ```sh
-uv run --no-project --with 'pytest>=8,<9' python -m pytest \
+uv run --no-project --isolated --with 'pytest>=8,<9' python -m pytest \
   tests/unit tests/test_snapshot_helpers.py
 ```
 
