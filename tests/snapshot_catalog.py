@@ -239,8 +239,13 @@ def check_case(
     kind: str,
     actual: Snapshot,
     *,
+    update: bool = False,
     only: frozenset[str] | None = None,
 ) -> str:
+    if update:
+        from snapshot_updates import update_snapshot
+
+        return update_snapshot(repo, case_id, kind, actual, only=only).describe()
     try:
         catalog = load_catalog(repo)
         expected = select_expected(catalog, case_id, kind, actual, only)
