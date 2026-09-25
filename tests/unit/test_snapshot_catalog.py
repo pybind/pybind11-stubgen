@@ -23,6 +23,49 @@ from snapshot_helpers import HarnessError, SnapshotMismatch
 from snapshot_test_support import tree_state, write_catalog
 
 
+def test_shipped_catalog_has_complete_literal_coverage_and_shared_payloads():
+    catalog = load_catalog(Path(__file__).resolve().parents[2])
+    annotated = "numpy-array-wrap-with-annotated"
+    type_var = "numpy-array-use-type-var"
+    cases = [
+        ((3, 10), "v3.0", annotated),
+        ((3, 11), "v3.0", annotated),
+        ((3, 12), "v3.0", annotated),
+        ((3, 13), "v3.0", annotated),
+        ((3, 13), "v3.0", type_var),
+        ((3, 10), "v2.13", annotated),
+        ((3, 11), "v2.13", annotated),
+        ((3, 12), "v2.13", annotated),
+        ((3, 13), "v2.13", annotated),
+        ((3, 13), "v2.13", type_var),
+        ((3, 13), "v2.9", annotated),
+        ((3, 13), "v2.11", annotated),
+        ((3, 13), "v2.12", annotated),
+    ]
+    assert set(catalog.cases) == {
+        f"python-{major}.{minor}-pybind11-{branch}-{mode}"
+        for (major, minor), branch, mode in cases
+    }
+    for kind, required in (
+        ("stubs", "demo/__init__.pyi"),
+        ("errors", "demo.errors.stderr.txt"),
+    ):
+        referenced = set()
+        variants = {}
+        for case in catalog.cases:
+            mapping = catalog.mapping(case, kind)
+            assert required in mapping
+            for name, reference in mapping.items():
+                referenced.add(reference)
+                key = (name, catalog.pools[kind][reference])
+                assert variants.setdefault(key, reference) == reference
+        assert referenced == set(catalog.pools[kind])
+        assert all(
+            entry[0] in ("file", "dir")
+            for entry in tree_state(catalog.repo / "tests" / kind).values()
+        )
+
+
 def sample(tmp_path):
     cases = {
         "a": {"stubs": {"demo/a.pyi": "shared/a.pyi"}, "errors": {}},

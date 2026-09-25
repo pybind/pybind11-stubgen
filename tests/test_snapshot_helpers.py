@@ -8,6 +8,30 @@ from pathlib import Path
 import pytest
 
 import snapshot_helpers as h
+from snapshot_catalog import load_catalog
+from snapshot_test_support import tree_state, write_catalog
+
+
+def seed_catalog(case):
+    write_catalog(
+        case.repo,
+        {
+            case.id: {
+                "stubs": {"demo/__init__.pyi": "seed/init.pyi"},
+                "errors": {"demo.errors.stderr.txt": "seed/stderr.txt"},
+            },
+            "unrelated": {
+                "stubs": {"demo/__init__.pyi": "seed/init.pyi"},
+                "errors": {"demo.errors.stderr.txt": "seed/stderr.txt"},
+            },
+        },
+        {
+            "stubs": {"seed/init.pyi": b"original"},
+            "errors": {"seed/stderr.txt": b"original"},
+        },
+    )
+    (case.repo / ".git").mkdir()
+    (case.repo / ".git/index").write_bytes(b"index sentinel")
 
 
 def write_files(root: Path, files: dict[str, bytes]) -> None:
@@ -728,12 +752,12 @@ def test_case_requires_existing_profiles_and_uses_runtime_python(tmp_path):
     mode = "numpy-array-wrap-with-annotated"
     with pytest.raises(h.HarnessError):
         h.make_case(tmp_path, (3, 13), "v3.0", mode)
-    write_files(tmp_path / "tests/stubs/python-3.13/pybind11-v3.0" / mode, {})
-    write_files(tmp_path / "tests/errors/pybind11-v3.0", {})
+    seed_catalog(h.DemoCase(tmp_path, (3, 13), "v3.0", mode))
     case = h.make_case(tmp_path, (3, 13), "v3.0", mode)
-    assert case.stub_profile == Path("python-3.13/pybind11-v3.0") / mode
-    assert case.error_profile == Path("pybind11-v3.0")
-    assert "python-3.13" in case.id
+    assert case.catalog_path == tmp_path / "tests/snapshot_cases.toml"
+    assert case.id == "python-3.13-pybind11-v3.0-numpy-array-wrap-with-annotated"
+    with pytest.raises(h.HarnessError, match="python-3.12"):
+        h.make_case(tmp_path, (3, 12), "v3.0", mode)
 
 
 @pytest.mark.parametrize("failure_stage", ["generator", "formatter"])
@@ -744,8 +768,8 @@ def test_success_update_never_accepts_failed_generation_or_formatting(
 
     repo = tmp_path / "repo"
     case = h.DemoCase(repo, (3, 13), "v3.0", "numpy-array-wrap-with-annotated")
-    reference = case.stubs_root / case.stub_profile
-    write_files(reference, {"demo/__init__.pyi": b"original"})
+    seed_catalog(case)
+    before = tree_state(case.repo)
     messages = []
 
     def generate(argv, **kwargs):
@@ -765,7 +789,11 @@ def test_success_update_never_accepts_failed_generation_or_formatting(
         integration.test_demo_stubs(
             case, tmp_path / "work", True, None, messages.append
         )
-    assert h.read_tree(reference) == {"demo/__init__.pyi": b"original"}
+    assert tree_state(case.repo) == before
+    context = (tmp_path / "work/failure.txt").read_text()
+    assert str(case.catalog_path) in context
+    assert "demo/__init__.pyi" in context
+    assert str(case.stubs_root / "seed/init.pyi") in context
     assert messages == []
 
 
@@ -773,8 +801,8 @@ def test_error_update_rejects_traceback_even_with_exit_one(tmp_path, monkeypatch
     import test_demo_errors as integration
 
     case = h.DemoCase(tmp_path / "repo", (3, 13), "v3.0", "numpy-array-use-type-var")
-    reference = case.errors_root / case.error_profile
-    write_files(reference, {"demo.errors.stderr.txt": b"original"})
+    seed_catalog(case)
+    before = tree_state(case.repo)
 
     def traceback_result(argv, **kwargs):
         assert argv[:4] == [sys.executable, "-I", "-m", "pybind11_stubgen"]
@@ -786,7 +814,10 @@ def test_error_update_rejects_traceback_even_with_exit_one(tmp_path, monkeypatch
     monkeypatch.setattr(integration, "run_command", traceback_result)
     with pytest.raises(h.HarnessError, match="traceback"):
         integration.test_demo_errors(case, tmp_path / "work", True, None, print)
-    assert h.read_tree(reference) == {"demo.errors.stderr.txt": b"original"}
+    assert tree_state(case.repo) == before
+    context = (tmp_path / "work/failure.txt").read_text()
+    assert str(case.catalog_path) in context
+    assert str(case.errors_root / "seed/stderr.txt") in context
 
 
 @pytest.mark.parametrize("kind", ["stubs", "errors"])
@@ -804,18 +835,15 @@ def test_integration_check_and_update_paths_with_synthetic_output(
     run_test = (
         integration.test_demo_stubs if kind == "stubs" else integration.test_demo_errors
     )
-    reference = (
-        case.stubs_root / case.stub_profile
-        if kind == "stubs"
-        else case.errors_root / case.error_profile
-    )
+    seed_catalog(case)
+    before = tree_state(case.repo)
+    original = load_catalog(case.repo)
     filename = "demo/__init__.pyi" if kind == "stubs" else "demo.errors.stderr.txt"
     new_content = (
         b"new stubs\n"
         if kind == "stubs"
         else b"object 0x1234abcd5678\nTerminating due to previous errors\n"
     )
-    write_files(reference, {filename: b"original"})
     messages = []
 
     def generate(argv, **kwargs):
@@ -831,12 +859,22 @@ def test_integration_check_and_update_paths_with_synthetic_output(
         monkeypatch.setattr(integration, "format_stubs", lambda *args: None)
     if update:
         run_test(case, tmp_path / "work", True, None, messages.append)
-        assert h.read_tree(reference) == {filename: new_content}
-        assert messages and str(reference.resolve()) in messages[0]
+        fresh = load_catalog(case.repo)
+        assert fresh.snapshot(case.id, kind) == {filename: new_content}
+        other_kind = "errors" if kind == "stubs" else "stubs"
+        assert fresh.snapshot(case.id, other_kind) == original.snapshot(
+            case.id, other_kind
+        )
+        for other_kind in ("stubs", "errors"):
+            assert fresh.snapshot("unrelated", other_kind) == original.snapshot(
+                "unrelated", other_kind
+            )
+        assert (case.repo / ".git/index").read_bytes() == b"index sentinel"
+        assert messages and str(case.catalog_path) in messages[0]
     else:
         with pytest.raises(h.HarnessError, match="Changed:"):
             run_test(case, tmp_path / "work", False, None, messages.append)
-        assert h.read_tree(reference) == {filename: b"original"}
+        assert tree_state(case.repo) == before
         assert messages == []
 
 
@@ -847,8 +885,8 @@ def test_empty_output_cannot_erase_references(tmp_path, monkeypatch, empty_at):
     case = h.DemoCase(
         tmp_path / "repo", (3, 13), "v3.0", "numpy-array-wrap-with-annotated"
     )
-    reference = case.stubs_root / case.stub_profile
-    write_files(reference, {"demo/__init__.pyi": b"original"})
+    seed_catalog(case)
+    before = tree_state(case.repo)
 
     def generate(argv, **kwargs):
         if empty_at == "formatter":
@@ -860,9 +898,14 @@ def test_empty_output_cannot_erase_references(tmp_path, monkeypatch, empty_at):
 
     monkeypatch.setattr(integration, "run_command", generate)
     monkeypatch.setattr(integration, "format_stubs", erase_output)
-    with pytest.raises(h.HarnessError, match="demo/__init__.pyi"):
+    expected_diagnostic = (
+        "Successful demo generation did not produce demo/__init__.pyi"
+        if empty_at == "generator"
+        else "Normalized output lost demo/__init__.pyi"
+    )
+    with pytest.raises(h.HarnessError, match=expected_diagnostic):
         integration.test_demo_stubs(case, tmp_path / "work", True, None, print)
-    assert h.read_tree(reference) == {"demo/__init__.pyi": b"original"}
+    assert tree_state(case.repo) == before
 
 
 def test_entry_points_use_pytest_without_legacy_mutating_checks():

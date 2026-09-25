@@ -311,6 +311,7 @@ def diagnostics(
     case_id: str,
     check_name: str,
     expected: Path,
+    reference_details: str = "",
 ) -> Iterator[None]:
     workspace = workspace.resolve()
     for root in reference_roots:
@@ -334,6 +335,7 @@ def diagnostics(
         if artifact_parent.is_relative_to(workspace):
             raise HarnessError("Artifact destination is inside the working workspace")
     context = f"Case: {case_id}/{check_name}\nReference: {expected.resolve()}\nWorkspace: {workspace}\n"
+    context += reference_details
     try:
         workspace.mkdir(parents=True, exist_ok=True)
         _write_diagnostic(workspace / "context.txt", context)
@@ -397,17 +399,8 @@ class DemoCase:
         return self.repo / "tests/errors"
 
     @property
-    def stub_profile(self) -> Path:
-        major, minor = self.python_version
-        return (
-            Path(f"python-{major}.{minor}")
-            / f"pybind11-{self.branch}"
-            / self.numpy_format
-        )
-
-    @property
-    def error_profile(self) -> Path:
-        return Path(f"pybind11-{self.branch}")
+    def catalog_path(self) -> Path:
+        return self.repo / "tests/snapshot_cases.toml"
 
 
 def make_case(
@@ -423,6 +416,12 @@ def make_case(
             "Native tests require --pybind11-branch and --numpy-format; use tox to build the matching demo"
         )
     case = DemoCase(repo.resolve(), python_version, branch, numpy_format)
-    resolve_profile(case.stubs_root, case.stub_profile)
-    resolve_profile(case.errors_root, case.error_profile)
+    from snapshot_catalog import load_catalog
+
+    try:
+        catalog = load_catalog(case.repo)
+        for kind in ("stubs", "errors"):
+            catalog.mapping(case.id, kind)
+    except HarnessError as error:
+        raise HarnessError(f"Case {case.id}: {error}") from error
     return case

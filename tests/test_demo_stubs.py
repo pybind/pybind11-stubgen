@@ -1,8 +1,8 @@
 import sys
 
+from snapshot_catalog import check_case, load_catalog
 from snapshot_helpers import (
     HarnessError,
-    check_snapshot,
     diagnostics,
     format_stubs,
     read_tree,
@@ -14,15 +14,16 @@ def test_demo_stubs(
     demo_case, tmp_path, update_snapshots, artifacts_dir, report_update
 ):
     case = demo_case
-    expected = case.stubs_root / case.stub_profile
+    expected = case.catalog_path
     output = tmp_path / "output"
     with diagnostics(
         tmp_path,
         artifacts=artifacts_dir,
-        reference_roots=(case.stubs_root, case.errors_root),
+        reference_roots=(expected, case.stubs_root, case.errors_root),
         case_id=case.id,
         check_name="stubs",
         expected=expected,
+        reference_details=load_catalog(case.repo).context(case.id, "stubs"),
     ):
         run_command(
             [
@@ -52,10 +53,8 @@ def test_demo_stubs(
         actual = read_tree(output)
         if "demo/__init__.pyi" not in actual:
             raise HarnessError("Normalized output lost demo/__init__.pyi")
-        changed = check_snapshot(
-            case.stubs_root, case.stub_profile, actual, update=update_snapshots
+        message = check_case(
+            case.repo, case.id, "stubs", actual, update=update_snapshots
         )
         if update_snapshots:
-            report_update(
-                f"{case.id}: {expected} -> {expected.resolve()}; changed: {changed}"
-            )
+            report_update(message)
