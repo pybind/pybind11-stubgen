@@ -81,11 +81,12 @@ jobs:
         with:
           name: dist
           path: dist
-      - name: Install wheel and pytest only
+      - name: Install wheel and test dependencies
         shell: bash
         run: |
           uv venv .venv
-          uv pip install --python .venv/bin/python 'pytest>=8,<9' dist/*.whl
+          uv pip install --python .venv/bin/python 'pytest>=8,<9' \
+            'tomli>=2,<3; python_version < "3.11"' 'tomlkit>=0.13,<1' dist/*.whl
       - name: Test installed wheel without native fixtures
         env:
           STUBGEN_TEST_INSTALLED: "1"

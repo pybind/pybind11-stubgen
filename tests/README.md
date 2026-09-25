@@ -22,16 +22,18 @@ uv tool install tox --with tox-uv
 
 ## Harness self-tests, without a compiler
 
-With pytest installed:
+With pytest and the TOML test dependencies installed:
 
 ```sh
 python -m pytest tests/test_snapshot_helpers.py
 ```
 
-Or let uv supply only pytest, without syncing the project's native dependencies:
+Or let uv supply test dependencies, without syncing the project's native dependencies:
 
 ```sh
-uv run --no-project --with 'pytest>=8,<9' python -m pytest tests/test_snapshot_helpers.py
+uv run --no-project --isolated --with 'pytest>=8,<9' \
+  --with 'tomli>=2,<3; python_version < "3.11"' --with 'tomlkit>=0.13,<1' \
+  python -m pytest tests/test_snapshot_helpers.py
 ```
 
 ## Compiler-free production tests
@@ -43,8 +45,9 @@ is needed. The following command tests source edits directly without syncing
 the development dependency group:
 
 ```sh
-uv run --no-project --isolated --with 'pytest>=8,<9' python -m pytest \
-  tests/unit tests/test_snapshot_helpers.py
+uv run --no-project --isolated --with 'pytest>=8,<9' \
+  --with 'tomli>=2,<3; python_version < "3.11"' --with 'tomlkit>=0.13,<1' \
+  python -m pytest tests/unit tests/test_snapshot_helpers.py
 ```
 
 To test a non-editable installation on each supported matrix interpreter:
