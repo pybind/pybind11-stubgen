@@ -38,6 +38,8 @@ def tree_state(root: Path) -> dict[str, tuple[str, bytes | str]]:
 
 def write_catalog(repo: Path, cases: Cases, payloads: dict[str, Snapshot]) -> Path:
     lines = ["format = 1", ""]
+    if not cases:
+        lines.extend(["[cases]", ""])
     for kind in ("stubs", "errors"):
         root = repo / "tests" / kind
         root.mkdir(parents=True, exist_ok=True)

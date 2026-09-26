@@ -81,6 +81,17 @@ def sample(tmp_path):
     return repo
 
 
+def test_empty_catalog_fixture_round_trips(tmp_path):
+    repo = write_catalog(tmp_path / "repo", {}, {})
+
+    catalog = load_catalog(repo)
+
+    assert catalog.cases == {}
+    assert catalog.pools == {"stubs": {}, "errors": {}}
+    assert (repo / "tests/stubs").is_dir()
+    assert (repo / "tests/errors").is_dir()
+
+
 def test_literal_selection_and_read_only_failure(tmp_path):
     repo = sample(tmp_path)
     before = tree_state(repo)
