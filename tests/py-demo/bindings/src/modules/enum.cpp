@@ -35,5 +35,13 @@ void bind_enum_module(py::module&&m) {
         .value("Red", NativeColor::Red)
         .value("Blue", NativeColor::Blue)
         .finalize();
+
+    // Regression: https://github.com/pybind/pybind11-stubgen/issues/304
+    // Defaults referring to a py::native_enum must not be rendered in a form
+    // that triggers a parent-package lookup at stub import time.
+    m.def(
+        "accept_defaulted_native_enum",
+        [](const NativeColor &color) {},
+        py::arg("color") = NativeColor::Red);
 #endif
 }
