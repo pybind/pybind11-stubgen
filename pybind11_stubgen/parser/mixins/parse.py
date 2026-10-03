@@ -264,6 +264,8 @@ class BaseParser(IParser):
         func_name = Identifier(path[-1])
 
         try:
+            if type(func) is types.BuiltinFunctionType:
+                raise TypeError
             (
                 args,
                 var_args,
