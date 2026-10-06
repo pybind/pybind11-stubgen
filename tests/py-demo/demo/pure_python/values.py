@@ -1,3 +1,4 @@
-from typing import Callable, Dict
+from collections.abc import Callable
+from typing import Dict
 
-callables_dict: Dict[str, Callable] = {"len": len, "int": int}
+callables_dict: dict[str, Callable] = {"len": len, "int": int}

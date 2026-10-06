@@ -27,7 +27,7 @@ class InvalidExpression:
         return f"Invalid python expression `{self.text}`"
 
 
-class QualifiedName(Tuple[Identifier, ...]):
+class QualifiedName(tuple[Identifier, ...]):
     """Fully Qualified Name"""
 
     @classmethod
@@ -88,7 +88,7 @@ class TypeVar_:
             f'{self.name} = typing.TypeVar("{self.name}"'
             + (", " if self.constraints else "")
             + (", ".join(str(c) for c in self.constraints))
-            + (f", bound={str(self.bound)}" if self.bound is not None else "")
+            + (f", bound={self.bound!s}" if self.bound is not None else "")
             + (f", covariant={self.covariant}" if self.covariant else "")
             + (f", contravariant={self.contravariant}" if self.contravariant else "")
             + ")"

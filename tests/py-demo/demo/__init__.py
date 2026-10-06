@@ -4,5 +4,4 @@
 from . import pure_python
 from .core import *
 
-#
 version = "0.0.0"

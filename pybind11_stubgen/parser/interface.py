@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import abc
 import types
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from pybind11_stubgen.parser.errors import ParserError
 from pybind11_stubgen.structs import (
@@ -87,7 +88,6 @@ class IParser(abc.ABC):
         PEP 695 added template syntax to classes and functions.
         This will call the function with these additional local types.
         """
-        ...
 
     @abc.abstractmethod
     def parse_args_str(self, args_str: str) -> list[Argument]: ...

@@ -10,5 +10,5 @@ class C(B):
     """C"""
 
 
-class X(object):
+class X:
     pass

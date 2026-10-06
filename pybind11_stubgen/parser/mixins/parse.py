@@ -6,7 +6,8 @@ import re
 import sys
 import types
 import typing
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from pybind11_stubgen.parser.errors import (
     InvalidExpressionError,
@@ -424,12 +425,10 @@ class BaseParser(IParser):
 
     def handle_type(self, type_: type) -> QualifiedName:
         return QualifiedName(
-            (
-                Identifier(part)
-                for part in (
-                    *type_.__module__.split("."),
-                    *type_.__qualname__.split("."),
-                )
+            Identifier(part)
+            for part in (
+                *type_.__module__.split("."),
+                *type_.__qualname__.split("."),
             )
         )
 
@@ -914,7 +913,7 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
     def _strip_empty_lines(self, doc_lines: list[str]) -> Docstring | None:
         assert isinstance(doc_lines, list)
         start = 0
-        for start in range(0, len(doc_lines)):
+        for start in range(len(doc_lines)):
             if len(doc_lines[start].strip()) > 0:
                 break
         end = len(doc_lines) - 1
