@@ -17,10 +17,10 @@ def args_mix(
     *args: int,
     x: int = 1,
     y=int,
-    **kwargs: typing.Dict[int, str],
+    **kwargs: dict[int, str],
 ): ...
 
 
 def nested_current_module_annotations(
-    tokens: list[Token], expr: typing.Optional[Expression] = None
+    tokens: list[Token], expr: Expression | None = None
 ) -> dict[str, Expression]: ...

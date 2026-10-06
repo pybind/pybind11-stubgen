@@ -31,5 +31,5 @@ def lambda_as_default_arg(callback=lambda val: 0): ...
 def static_method_as_default_arg(callback=_Dummy.foo): ...
 
 
-def accept_frozenset(arg: typing.FrozenSet[int | float]) -> int | None:
+def accept_frozenset(arg: frozenset[int | float]) -> int | None:
     pass
