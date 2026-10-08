@@ -448,6 +448,15 @@ class FixTypingTypeNames(IParser):
             return result
 
         word = result.name[0]
+        # Preserve qualified user types when their parents are normalised.
+        # FilterPybind11ViewClasses omits these views, so keep their substitutes.
+        if result.source_was_qualified and word not in (
+            "ItemsView",
+            "KeysView",
+            "ValuesView",
+        ):
+            return result
+
         if word in self.__typing_names:
             package = "typing"
             if word in self.__typing_extensions_names:
