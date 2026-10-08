@@ -667,7 +667,11 @@ class ExtractSignaturesFromPybind11Docstrings(IParser):
             parameters = [
                 self.parse_annotation_str(param_str) for param_str in split_parameters
             ]
-        return ResolvedType(name=qual_name, parameters=parameters)
+        return ResolvedType(
+            name=qual_name,
+            parameters=parameters,
+            source_was_qualified=len(qual_name) > 1,
+        )
 
     def parse_function_docstring(
         self, func_name: Identifier, doc_lines: list[str]

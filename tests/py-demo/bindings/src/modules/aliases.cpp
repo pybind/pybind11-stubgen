@@ -2,6 +2,7 @@
 
 #include <demo/Foo.h>
 #include <demo/sublibA/ConsoleColors.h>
+#include <pybind11/stl.h>
 
 namespace aliases_detail {
     class Dummy {
@@ -18,10 +19,25 @@ namespace aliases_detail {
     };
     struct Bar4 {
     };
+
+    struct Sequence {
+        explicit Sequence(int) {}
+    };
+
+    struct List {
+    };
 } // namespace
 
 void bind_aliases_module(py::module &&m) {
     using namespace aliases_detail;
+    {
+        py::class_<Sequence>(m, "Sequence").def(py::init<int>());
+        py::class_<List>(m, "List").def(py::init<>());
+        m.def("get_sequence", [](const Sequence &value) { return value; });
+        m.def("get_sequences", [](const std::vector<Sequence> &values) { return values; });
+        m.def("get_list", [](const List &value) { return value; });
+        m.def("get_lists", [](const std::vector<List> &values) { return values; });
+    }
     {
         // python module as value
         auto &&pyDummy = py::class_<Dummy>(m, "Dummy");
@@ -47,10 +63,12 @@ void bind_aliases_module(py::module &&m) {
     {
         auto &&sub = m.def_submodule("foreign_arg");
         sub.def("set_foo", [](demo::Foo &) { return 13; });
+        sub.def("set_sequence", [](const Sequence &) {});
     }
     {
         auto &&sub = m.def_submodule("foreign_return");
         sub.def("get_foo", []() { return demo::Foo(); });
+        sub.def("get_sequence", []() { return Sequence(1); });
     }
     {
         auto &&sub = m.def_submodule("foreign_class_member");
