@@ -32,6 +32,8 @@ jobs:
     name: Build wheel
     runs-on: ubuntu-latest
     needs: [check]
+    outputs:
+      native-matrix: ${{ steps.native-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
@@ -39,6 +41,16 @@ jobs:
           python-version: "3.13"
 
       - uses: astral-sh/setup-uv@v7
+
+      - name: Derive native test matrix from tox
+        id: native-matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run --no-project --isolated --with tox --with tox-uv \
+            tox list -d --no-desc > "$RUNNER_TEMP/native-envs.txt"
+          matrix=$(python tests/native_matrix.py "$RUNNER_TEMP/native-envs.txt")
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
 
       - name: Build sdist + wheel
         run: |
@@ -51,157 +63,79 @@ jobs:
           name: dist
           path: dist
 
-  tests:
-    name: "Test 🐍 ${{ matrix.config.python }} • pybind-${{ matrix.config.pybind11-branch }} • ${{ matrix.config.numpy-format }}"
+  unit-tests:
+    name: "Compiler-free tests • Python ${{ matrix.python }}"
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
       fail-fast: false
       matrix:
-        config:
-          [
-            {
-              pybind11-branch: "v3.0",
-              python: "3.13",
-              numpy-format: "numpy-array-use-type-var",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v3.0",
-              python: "3.13",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v3.0",
-              python: "3.12",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v3.0",
-              python: "3.11",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v3.0",
-              python: "3.10",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v2.13",
-              python: "3.13",
-              numpy-format: "numpy-array-use-type-var",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v2.13",
-              python: "3.13",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v2.13",
-              python: "3.12",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v2.13",
-              python: "3.11",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v2.13",
-              python: "3.10",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "4.2.x",
-            },
-            {
-              pybind11-branch: "v2.12",
-              python: "3.13",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "3.28.3",
-            },
-            {
-              pybind11-branch: "v2.11",
-              python: "3.13",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "3.28.3",
-            },
-            {
-              pybind11-branch: "v2.9",
-              python: "3.13",
-              numpy-format: "numpy-array-wrap-with-annotated",
-              cmake-version: "3.28.3",
-            },
-          ]
+        python: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v5
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v6
         with:
           name: dist
           path: dist
-
-      - name: Setup Python ${{ matrix.config.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.config.python }}
-
-      - uses: astral-sh/setup-uv@v7
-
-      - name: Update CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ matrix.config.cmake-version }}
-
-      - name: Create UV venv
+      - name: Install wheel and test dependencies
+        shell: bash
         run: |
           uv venv .venv
+          uv pip install --python .venv/bin/python 'pytest>=8,<9' \
+            'tomli>=2,<3; python_version < "3.11"' 'tomlkit>=0.13,<1' dist/*.whl
+      - name: Test installed wheel without native fixtures
+        env:
+          STUBGEN_TEST_INSTALLED: "1"
+        run: .venv/bin/python -I -m pytest tests/unit tests/test_snapshot_helpers.py
 
-      - name: Setup annotations on Linux
-        if: runner.os == 'Linux'
-        run: uv pip install pytest-github-actions-annotate-failures
-
-      - name: Install requirements
-        run: uv sync --group dev --no-install-project
-
-      - name: Install
+  tests:
+    name: "Native tests • ${{ matrix.env }}"
+    runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.build.outputs.native-matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v7
+      - name: Test supplied wheel through shared tox profile
         shell: bash
-        working-directory: dist
-        run: uv pip install --disable-pip-version-check *.whl
-
-      - name: Install demo module
-        shell: bash
+        env:
+          TOX_PROFILE: ${{ matrix.env }}
         run: |
-          source .venv/bin/activate
-          ./tests/install-demo-module.sh --pybind11-branch "${{ matrix.config.pybind11-branch }}"
-
-      - name: Check stubs generation
-        shell: bash
-        run: |
-          source .venv/bin/activate
-          ./tests/check-demo-stubs-generation.sh --stubs-sub-dir "stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}" --${{ matrix.config.numpy-format }}
-
-      - name: Archive patch
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          test "${#wheels[@]}" -eq 1
+          uv run --no-project --isolated --with tox --with tox-uv \
+            tox -e "$TOX_PROFILE" --installpkg "${wheels[0]}"
+      - name: Archive native build and test diagnostics
         uses: actions/upload-artifact@v6
         if: failure()
         with:
-          name: "python-${{ matrix.config.python }}-pybind-${{ matrix.config.pybind11-branch }}-${{ matrix.config.numpy-format }}.patch"
-          path: "./tests/stubs/python-${{ matrix.config.python }}/pybind11-${{ matrix.config.pybind11-branch }}/${{ matrix.config.numpy-format }}.patch"
+          name: "${{ matrix.env }}-diagnostics"
+          include-hidden-files: true
+          path: |
+            .tox/${{ matrix.env }}/log/
+            .tox/${{ matrix.env }}/tmp/native/**/evidence.json
+            .tox/${{ matrix.env }}/tmp/native/**/*.log
+            .tox/${{ matrix.env }}/tmp/native/**/CMakeCache.txt
+            .tox/${{ matrix.env }}/tmp/native/**/CMakeConfigureLog.yaml
+            .tox/${{ matrix.env }}/tmp/pytest-artifacts/
+            .tox/${{ matrix.env }}/tmp/native.xml
           retention-days: 30
           if-no-files-found: ignore
-
-      - name: Check error generation
-        shell: bash
-        run: |
-          source .venv/bin/activate
-          ./tests/check-demo-errors-generation.sh "pybind11-${{ matrix.config.pybind11-branch }}"
 
   test-cli-options:
     name: "Runs on 🐍 ${{ matrix.python }} • ${{ matrix.test-package }}"
@@ -261,7 +195,7 @@ jobs:
 
   publish:
     name: Publish distribution
-    needs: [check, build, tests, test-cli-options]
+    needs: [check, build, unit-tests, tests, test-cli-options]
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     runs-on: ubuntu-latest
     permissions:

@@ -30,6 +30,9 @@ dev = [
     "numpy~=1.20",
     "pip",
     "pre-commit>=4,<5",
+    "pytest>=8,<9",
+    "tomli>=2,<3; python_version < '3.11'",
+    "tomlkit>=0.13,<1",
     "scipy~=1.0",
     "typing_extensions>=4,<5",
     "mypy>=1.19.1",
@@ -58,3 +61,7 @@ indent-style = "space"
 
 [tool.ruff.lint.pycodestyle]
 max-line-length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
