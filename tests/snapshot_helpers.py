@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import difflib
-import errno
 import json
 import os
 import re
@@ -32,20 +31,6 @@ def relative_file(name: str) -> Path:
     ):
         raise HarnessError(f"Unsafe snapshot name: {name!r}")
     return Path(*path.parts)
-
-
-def resolve_profile(root: Path, profile: Path) -> Path:
-    relative_file(profile.as_posix())
-    try:
-        base = root.resolve(strict=True)
-        destination = (base / profile).resolve(strict=True)
-    except (OSError, RuntimeError) as error:
-        raise HarnessError(f"Unavailable snapshot profile: {root / profile}") from error
-    if not destination.is_relative_to(base) or destination == base:
-        raise HarnessError(f"Snapshot profile escapes root: {root / profile}")
-    if not destination.is_dir():
-        raise HarnessError(f"Snapshot profile is not a directory: {destination}")
-    return destination
 
 
 def read_tree(root: Path) -> Snapshot:
@@ -104,67 +89,6 @@ def diff_tree(expected: Snapshot, actual: Snapshot) -> str:
 
 class SnapshotMismatch(HarnessError):
     """Generated output differs from its reference."""
-
-
-def check_snapshot(
-    root: Path,
-    profile: Path,
-    actual: Snapshot,
-    *,
-    update: bool = False,
-    only: frozenset[str] | None = None,
-) -> tuple[str, ...]:
-    for name, content in actual.items():
-        path = relative_file(name)
-        if not isinstance(content, bytes):
-            raise HarnessError(f"Snapshot content must be bytes: {name}")
-        if any(parent.as_posix() in actual for parent in path.parents):
-            raise HarnessError(f"Conflicting snapshot paths: {name}")
-    if only is not None:
-        for name in only:
-            relative_file(name)
-        if actual.keys() - only:
-            raise HarnessError("Actual output exceeds the selected snapshot scope")
-    destination = resolve_profile(root, profile)
-    expected = read_tree(destination)
-    if only is not None:
-        for name in only:
-            target = destination / relative_file(name)
-            if target.exists() and not target.is_file():
-                raise HarnessError(f"Scoped reference is not a file: {target}")
-        expected = {name: content for name, content in expected.items() if name in only}
-    difference = diff_tree(expected, actual)
-    if not difference:
-        return ()
-    if not update:
-        raise SnapshotMismatch(difference)
-    changed = tuple(
-        sorted(
-            name
-            for name in expected.keys() | actual.keys()
-            if name not in expected
-            or name not in actual
-            or expected[name] != actual[name]
-        )
-    )
-    for name in expected.keys() - actual.keys():
-        (destination / relative_file(name)).unlink()
-    if only is None:
-        directories = [path for path in destination.rglob("*") if path.is_dir()]
-        for directory in sorted(
-            directories, key=lambda path: len(path.parts), reverse=True
-        ):
-            try:
-                directory.rmdir()
-            except OSError as error:
-                # Nonempty directories contain retained reference files.
-                if error.errno not in (errno.ENOTEMPTY, errno.EEXIST):
-                    raise
-    for name, content in actual.items():
-        target = destination / relative_file(name)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(content)
-    return changed
 
 
 def run_command(
