@@ -21,6 +21,8 @@ from . import (
 __all__: list[str] = [
     "Color",
     "Dummy",
+    "List",
+    "Sequence",
     "foreign_arg",
     "foreign_attr",
     "foreign_class_alias",
@@ -31,11 +33,21 @@ __all__: list[str] = [
     "foreign_return",
     "foreign_type_alias",
     "func",
+    "get_list",
+    "get_lists",
+    "get_sequence",
+    "get_sequences",
     "local_func_alias",
     "local_type_alias",
     "missing_self_arg",
     "random",
 ]
+
+class Sequence:
+    def __init__(self, arg0: int) -> None: ...
+
+class List:
+    def __init__(self) -> None: ...
 
 class Dummy:
     linalg = numpy.linalg
@@ -47,6 +59,10 @@ def foreign_enum_default(
     color: typing.Any = demo._bindings.enum.ConsoleForegroundColor.Blue,
 ) -> None: ...
 def func(arg0: int) -> int: ...
+def get_list(arg0: List) -> List: ...
+def get_lists(arg0: list[List]) -> list[List]: ...
+def get_sequence(arg0: Sequence) -> Sequence: ...
+def get_sequences(arg0: list[Sequence]) -> list[Sequence]: ...
 
 local_type_alias = Color
 local_func_alias = func

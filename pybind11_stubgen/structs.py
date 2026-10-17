@@ -57,6 +57,7 @@ class ResolvedType:
     parameters: list[ResolvedType | Value | InvalidExpression] | None = field_(
         default=None
     )
+    source_was_qualified: bool = field_(default=False, compare=False, repr=False)
 
     def __str__(self):
         if self.parameters:
