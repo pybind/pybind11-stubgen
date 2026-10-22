@@ -59,6 +59,8 @@ class ResolvedType:
     )
 
     def __str__(self):
+        if self.name == ("typing", "Union"):
+            return " | ".join(str(p) for p in self.parameters)
         if self.parameters:
             param_str = "[" + ", ".join(str(p) for p in self.parameters) + "]"
         else:

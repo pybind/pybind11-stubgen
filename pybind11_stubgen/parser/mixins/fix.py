@@ -328,6 +328,14 @@ class FixBuiltinTypes(IParser):
 
             return QualifiedName(result[1:])
 
+        if result in {
+            ("types", "GenericAlias"),
+            ("typing", "Union"),
+            ("typing", "_UnionGenericAlias"),
+            ("types", "UnionType"),
+        }:
+            return QualifiedName(("typing", "TypeAlias"))
+
         return result
 
     def report_error(self, error: ParserError):
