@@ -35,8 +35,8 @@ dev = [
     "mypy>=1.19.1",
 ]
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+include = ["pybind11_stubgen*"]
 
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"], content-type = "text/markdown"}
