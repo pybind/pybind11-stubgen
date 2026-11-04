@@ -37,6 +37,7 @@ class FilterClassMembers(IParser):
             Identifier,
             (
                 "__annotations__",
+                "__conditional_annotations__",
                 "__builtins__",
                 "__cached__",
                 "__file__",
