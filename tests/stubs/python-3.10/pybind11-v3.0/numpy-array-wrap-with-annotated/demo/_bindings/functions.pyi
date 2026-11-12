@@ -67,6 +67,7 @@ def func_w_named_pos_args(
     x: typing.SupportsInt | typing.SupportsIndex,
     y: typing.SupportsInt | typing.SupportsIndex,
     z: typing.SupportsInt | typing.SupportsIndex,
+    /,
 ) -> None: ...
 def generic(*args, **kwargs) -> None: ...
 @typing.overload
