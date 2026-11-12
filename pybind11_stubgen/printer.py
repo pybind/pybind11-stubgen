@@ -259,13 +259,17 @@ class Printer:
                 pos_only = True
                 kw_only = True
             if not pos_only and not arg.pos_only:
+                # First non-positional-only argument
                 pos_only = True
                 args.append("/")
             if not kw_only and arg.kw_only:
+                # First keyword-only argument
                 kw_only = True
                 args.append("*")
             args.append(self.print_argument(arg))
-        if len(args) > 0 and args[0] == "/":
+        if not pos_only and func.args and func.args[-1].pos_only:
+            args.append("/")
+        if args and args[0] == "/":
             args = args[1:]
         signature = [f"def {func.name}"]
 
